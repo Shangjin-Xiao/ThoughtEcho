@@ -1,13 +1,46 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/chat_message.dart' as app_chat;
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/services/agent_service.dart';
+import 'package:thoughtecho/utils/agent_history_builder.dart';
 
 import 'agent_tools/memory_tool_harness.dart';
+
+app_chat.ChatMessage _buildOpeningMessage() => app_chat.ChatMessage(
+      id: 'open-insight',
+      role: 'assistant',
+      isUser: false,
+      content: '上周你在深夜记录了三次灵感，整体节奏正在放缓。',
+      timestamp: DateTime(2026, 8, 10),
+      metaJson: jsonEncode({
+        'type': 'opening_context',
+        'source': 'periodic_insight',
+        'period': 'week',
+        'periodLabel': '上周',
+        'rangeStart': '2026-08-03',
+        'rangeEnd': '2026-08-09',
+      }),
+    );
+
+app_chat.ChatMessage _buildTurnMessage(String role, String content) =>
+    app_chat.ChatMessage(
+      id: '$role-$content',
+      role: role,
+      isUser: role == 'user',
+      content: content,
+      timestamp: DateTime(2026, 8, 10),
+    );
+
+List<app_chat.ChatMessage> buildAgentHistoryForOpeningTest(
+  List<app_chat.ChatMessage> raw,
+) =>
+    AgentHistoryBuilder.build(raw);
 
 openai.ChatCompletion _completion(String content) => openai.ChatCompletion(
       object: 'chat.completion',
@@ -142,4 +175,107 @@ void main() {
           change == 'none' ? [directive] : isEmpty);
     });
   }
+
+  test(
+      'pins <opening_context> as structured user data right after <user_profile> across long history without touching systemPrompt, and reports fallback modelLabel',
+      () async {
+    const geminiProvider = AIProviderSettings(
+      id: 'p_gemini',
+      name: 'Gemini Service',
+      apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      model: 'gemini-2.5-pro',
+      providerSlug: 'google',
+    );
+
+    await harness.settingsService.updateMultiAISettings(
+      const MultiAISettings(
+        providers: [geminiProvider],
+        currentProviderId: 'p_gemini',
+      ),
+    );
+    await harness.memory.rememberProfile(
+      kind: AgentMemoryKind.style,
+      directive: '偏爱温和简洁的表达',
+    );
+
+    List<openai.ChatMessage>? capturedMessages;
+    final emittedModels = <String>[];
+    final rawSessionMessages = [
+      //模拟开场周期洞察引用块 + 超长多轮对话（超过历史窗口上限以验证钉住不被裁掉）
+      ...(() {
+        final list = [
+          _buildOpeningMessage(),
+        ];
+        for (var i = 0; i < 30; i++) {
+          final filler = '围绕阶段性随笔复盘思考节奏与行动线索记录补充说明。' * 12;
+          list.add(_buildTurnMessage('user', '第 $i 轮提问：$filler'));
+          list.add(_buildTurnMessage('assistant', '第 $i 轮回答：$filler'));
+        }
+        return list;
+      })(),
+    ];
+
+    final agent = AgentService(
+      settingsService: harness.settingsService,
+      memoryService: harness.memory,
+      tools: const [],
+      apiKeyResolver: (_) async => 'synthetic-key-12345678',
+      completionRequester: ({
+        required provider,
+        required messages,
+        required tools,
+        required temperature,
+        required maxTokens,
+      }) async {
+        if (maxTokens != 300 && provider.model == 'gemini-2.5-pro') {
+          throw Exception('429 quota exceeded');
+        }
+        if (maxTokens != 300) {
+          capturedMessages = messages;
+        }
+        return _completion('根据上周 8 月 3 日至 8 月 9 日的洞察展开分析。');
+      },
+    );
+    addTearDown(agent.dispose);
+    final sub = agent.events.listen((event) {
+      if (event is AgentModelSelectedEvent) {
+        emittedModels.add(event.modelLabel);
+      }
+    });
+    addTearDown(sub.cancel);
+
+    final history = buildAgentHistoryForOpeningTest(rawSessionMessages);
+    final response = await agent.runAgent(
+      userMessage: '围绕这段再展开讲讲',
+      history: history,
+    );
+
+    expect(response.modelLabel, isNot('Gemini Service · gemini-2.5-pro'));
+    expect(response.modelLabel, startsWith('Gemini Service · gemini-'));
+    expect(agent.lastUsedModelLabel, response.modelLabel);
+    expect(emittedModels.first, 'Gemini Service · gemini-2.5-pro');
+    expect(
+      capturedMessages!.any((m) => m.toJson().toString().contains('第 0 轮提问：')),
+      isFalse,
+    );
+    expect(
+      capturedMessages!.any((m) => m.toJson().toString().contains('第 29 轮提问：')),
+      isTrue,
+    );
+    expect(emittedModels.last, response.modelLabel);
+
+    expect(capturedMessages, isNotNull);
+    final sent = capturedMessages!;
+    // [0] systemPrompt must NOT contain untrusted opening text
+    expect(sent[0].toString(), isNot(contains('上周你在深夜记录了三次灵感')));
+    // [1] <user_profile>
+    expect(sent[1].toString(), contains('<user_profile>'));
+    // [2] pinned <opening_context> right after <user_profile>, surviving 60+ turns pruning!
+    expect(
+      sent[2].toString(),
+      contains('<opening_context source="periodic_insight">'),
+    );
+    expect(sent[2].toString(), contains('2026-08-03 ~ 2026-08-09'));
+    expect(sent[2].toString(), contains('上周你在深夜记录了三次灵感'));
+  });
 }

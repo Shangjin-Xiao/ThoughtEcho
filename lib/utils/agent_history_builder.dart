@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import '../models/chat_message.dart';
+import 'untrusted_text.dart';
 
 /// 把界面消息列表转换成可以喂给 Agent 的历史。
 ///
@@ -24,9 +27,14 @@ class AgentHistoryBuilder {
   /// 用户选择摘要消息的前缀，用于历史上下文中表示用户对提问的回复。
   static const String askUserHeader = '[用户选择]';
 
+  /// 会话开场引文元数据类型标识。
+  static const String openingContextMetaType = 'opening_context';
+
   /// 构建喂给 Agent 的历史消息列表。
   ///
   /// - 普通 user/assistant 文本消息原样保留；
+  /// - 会话顶部的开场引文（周期洞察或每日提示）转为带安全边界与指代说明的独立
+  ///   `user` 上下文消息，避免无头 `assistant` 消息紧接 `<user_profile>` 造成跨模型指代丢失；
   /// - `tool_progress` 元数据消息压缩成一条工具轨迹摘要，让模型知道自己
   ///   上一轮（或上一次会话）查过什么、拿到了什么；
   /// - 其余带元数据的消息（提案卡片等）保留其正文，不再整条丢弃；
@@ -37,16 +45,65 @@ class AgentHistoryBuilder {
     int traceCap = defaultTraceCap,
   }) {
     final history = <ChatMessage>[];
+    final hasAnyUserMessage = messages.any((m) => m.isUser);
 
     for (final message in messages) {
-      if (message.role == 'system' || message.isLoading) {
+      if (message.role == 'system' ||
+          message.isLoading ||
+          !message.includedInContext) {
         continue;
       }
 
       final meta = message.parsedMeta;
       if (meta == null) {
         if (message.content.trim().isEmpty) continue;
+        // 兼容旧版已落库会话：首条消息为无头 assistant 开场引文且后续存在用户提问时，
+        // 同样升级为独立开场引文数据消息，避免跨模型恢复时指代断裂。
+        if (history.isEmpty &&
+            !message.isUser &&
+            message.role == 'assistant' &&
+            hasAnyUserMessage) {
+          history.add(
+            ChatMessage(
+              id: '${message.id}_opening',
+              role: 'user',
+              isUser: true,
+              content: wrapOpeningContext(
+                message.content.trim(),
+                source: 'opening_quote',
+              ),
+              timestamp: message.timestamp,
+              metaJson: jsonEncode(<String, dynamic>{
+                'type': openingContextMetaType,
+                'source': 'opening_quote',
+              }),
+            ),
+          );
+          continue;
+        }
         history.add(message);
+        continue;
+      }
+
+      if (meta['type'] == openingContextMetaType) {
+        final trimmed = message.content.trim();
+        if (trimmed.isEmpty) continue;
+        history.add(
+          ChatMessage(
+            id: '${message.id}_opening',
+            role: 'user',
+            isUser: true,
+            content: wrapOpeningContext(
+              trimmed,
+              source: meta['source']?.toString() ?? 'daily_prompt',
+              periodLabel: meta['periodLabel']?.toString(),
+              rangeStart: meta['rangeStart']?.toString(),
+              rangeEnd: meta['rangeEnd']?.toString(),
+            ),
+            timestamp: message.timestamp,
+            metaJson: message.metaJson,
+          ),
+        );
         continue;
       }
 

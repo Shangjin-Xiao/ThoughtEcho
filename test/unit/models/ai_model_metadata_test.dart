@@ -4,12 +4,14 @@ import 'package:thoughtecho/models/ai_task.dart';
 
 void main() {
   group('AITask', () {
-    test('defines all four task slots with stable storage keys', () {
+    test('defines all six task slots with stable storage keys', () {
       expect(AITask.values, [
         AITask.dailyInsight,
         AITask.periodicInsight,
         AITask.dreaming,
         AITask.agent,
+        AITask.cardGeneration,
+        AITask.sessionTitle,
       ]);
       for (final task in AITask.values) {
         expect(AITask.tryParse(task.storageKey), task);

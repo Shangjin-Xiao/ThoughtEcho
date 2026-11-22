@@ -252,6 +252,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         builder: (_) => ThoughterPage(
           entrySource: ThoughterEntrySource.explore,
           openingMessage: _openingMessage(),
+          openingSource: ThoughterOpeningSource.dailyPrompt,
         ),
       ),
     );

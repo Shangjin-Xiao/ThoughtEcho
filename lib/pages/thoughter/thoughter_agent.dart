@@ -39,6 +39,7 @@ extension _ThoughterAgent on _ThoughterPageState {
     String? streamingMsgId;
     var streamingText = '';
     String? toolThinkingText;
+    String? turnModelLabel;
     var toolProgressInProgress = false;
     var reachedMaxRounds = false;
 
@@ -46,6 +47,11 @@ extension _ThoughterAgent on _ThoughterPageState {
       if (toolProgressMsgId != null) return;
       toolProgressMsgId = const Uuid().v4();
       toolProgressInProgress = true;
+      final initialModelLabel =
+          (turnModelLabel ?? agentService.lastUsedModelLabel ?? '').trim();
+      if (initialModelLabel.isNotEmpty) {
+        turnModelLabel = initialModelLabel;
+      }
       final msg = app_chat.ChatMessage(
         id: toolProgressMsgId!,
         role: 'assistant',
@@ -61,6 +67,7 @@ extension _ThoughterAgent on _ThoughterPageState {
           'items': [],
           'inProgress': true,
           'thinkingText': toolThinkingText ?? '',
+          'modelLabel': turnModelLabel ?? '',
         }),
       );
       _setState(() => _messages.add(msg));
@@ -139,6 +146,21 @@ extension _ThoughterAgent on _ThoughterPageState {
         switch (event) {
           case AgentThinkingEvent():
             streamingText = '';
+          case AgentModelSelectedEvent():
+            if (event.modelLabel.trim().isNotEmpty) {
+              turnModelLabel = event.modelLabel.trim();
+            }
+            if (toolProgressMsgId != null) {
+              _scheduleToolProgressUpdate(
+                toolProgressMsgId!,
+                toolItems,
+                inProgress: toolProgressInProgress,
+                thinkingText: toolThinkingText,
+                modelLabel: turnModelLabel,
+                preferredSessionId: agentInitialSessionId,
+                originGeneration: agentSessionGeneration,
+              );
+            }
           case AgentReasoningDeltaEvent():
             ensureToolProgressMessage();
             toolProgressInProgress = true;
@@ -157,6 +179,9 @@ extension _ThoughterAgent on _ThoughterPageState {
               toolItems,
               inProgress: true,
               thinkingText: toolThinkingText,
+              modelLabel: turnModelLabel,
+              preferredSessionId: agentInitialSessionId,
+              originGeneration: agentSessionGeneration,
             );
           case AgentTextDeltaEvent():
             if (toolProgressMsgId != null && toolProgressInProgress) {
@@ -166,6 +191,9 @@ extension _ThoughterAgent on _ThoughterPageState {
                 toolItems,
                 inProgress: false,
                 thinkingText: toolThinkingText,
+                modelLabel: turnModelLabel,
+                preferredSessionId: agentInitialSessionId,
+                originGeneration: agentSessionGeneration,
               );
             }
             if (streamingMsgId == null) {
@@ -220,6 +248,7 @@ extension _ThoughterAgent on _ThoughterPageState {
               toolItems,
               inProgress: true,
               thinkingText: toolThinkingText,
+              modelLabel: turnModelLabel,
               preferredSessionId: agentInitialSessionId,
               originGeneration: agentSessionGeneration,
             );
@@ -248,6 +277,7 @@ extension _ThoughterAgent on _ThoughterPageState {
                 toolItems,
                 inProgress: toolProgressInProgress,
                 thinkingText: toolThinkingText,
+                modelLabel: turnModelLabel,
                 preferredSessionId: agentInitialSessionId,
                 originGeneration: agentSessionGeneration,
               );
@@ -255,6 +285,9 @@ extension _ThoughterAgent on _ThoughterPageState {
 
           case AgentResponseEvent():
             reachedMaxRounds = event.reachedMaxRounds;
+            if ((event.modelLabel ?? '').trim().isNotEmpty) {
+              turnModelLabel = event.modelLabel!.trim();
+            }
             if (streamingMsgId != null) {
               _flushStreamUpdate();
               _cancelStreamUpdate();
@@ -266,6 +299,7 @@ extension _ThoughterAgent on _ThoughterPageState {
                 toolItems,
                 inProgress: false,
                 thinkingText: toolThinkingText,
+                modelLabel: turnModelLabel,
                 preferredSessionId: agentInitialSessionId,
                 originGeneration: agentSessionGeneration,
               );
@@ -288,6 +322,7 @@ extension _ThoughterAgent on _ThoughterPageState {
                 toolItems,
                 inProgress: false,
                 thinkingText: toolThinkingText,
+                modelLabel: turnModelLabel,
                 preferredSessionId: agentInitialSessionId,
                 originGeneration: agentSessionGeneration,
               );
@@ -378,6 +413,11 @@ extension _ThoughterAgent on _ThoughterPageState {
               )
             : null,
       );
+      final resolvedTurnModel =
+          (response.modelLabel ?? agentService.lastUsedModelLabel)?.trim();
+      if (resolvedTurnModel != null && resolvedTurnModel.isNotEmpty) {
+        turnModelLabel = resolvedTurnModel;
+      }
 
       await eventSubscription.cancel();
       if (identical(_agentEventSubscription, eventSubscription)) {
@@ -506,11 +546,17 @@ extension _ThoughterAgent on _ThoughterPageState {
         _cancelToolProgressUpdate();
         if (toolProgressMsgId != null) {
           toolProgressInProgress = false;
+          final fallbackModelLabel =
+              (turnModelLabel ?? agentService.lastUsedModelLabel)?.trim();
+          if (fallbackModelLabel != null && fallbackModelLabel.isNotEmpty) {
+            turnModelLabel = fallbackModelLabel;
+          }
           _updateToolProgressMessage(
             toolProgressMsgId!,
             toolItems,
             inProgress: false,
             thinkingText: toolThinkingText,
+            modelLabel: turnModelLabel,
             preferredSessionId: agentInitialSessionId,
             originGeneration: agentSessionGeneration,
           );
@@ -544,6 +590,7 @@ extension _ThoughterAgent on _ThoughterPageState {
     List<ToolProgressItem> items, {
     required bool inProgress,
     String? thinkingText,
+    String? modelLabel,
     String? preferredSessionId,
     int? originGeneration,
   }) {
@@ -554,6 +601,12 @@ extension _ThoughterAgent on _ThoughterPageState {
     _setState(() {
       final idx = _messages.indexWhere((m) => m.id == msgId);
       if (idx == -1) return;
+      final existingModelLabel =
+          (_messages[idx].parsedMeta?['modelLabel'] as String?)?.trim() ?? '';
+      final resolvedModelLabel =
+          (modelLabel != null && modelLabel.trim().isNotEmpty)
+              ? modelLabel.trim()
+              : existingModelLabel;
       final updatedMsg = _messages[idx].copyWith(
         isLoading: inProgress,
         metaJson: jsonEncode(<String, dynamic>{
@@ -571,6 +624,7 @@ extension _ThoughterAgent on _ThoughterPageState {
               .toList(),
           'inProgress': inProgress,
           'thinkingText': thinkingText ?? '',
+          'modelLabel': resolvedModelLabel,
         }),
       );
       _messages[idx] = updatedMsg;

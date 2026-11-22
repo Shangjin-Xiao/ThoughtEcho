@@ -4723,13 +4723,13 @@
   "agentMemoryNoticeDisable": "Don't remember",
   "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
   "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
-  "dreamingEnableTitle": "Refine your profile in the background",
+  "dreamingEnableTitle": "Auto-Organize Memory",
   "dreamingEnableDesc": "Let Thoughter refine your long-term profile when it is useful",
-  "dreamingOnIdleTitle": "Refine when the app is idle",
+  "dreamingOnIdleTitle": "Organize When Idle",
   "dreamingOnIdleDesc": "Refine your profile after the app has been idle for a moment",
-  "dreamingAfterInsightTitle": "Refine after periodic insights",
+  "dreamingAfterInsightTitle": "Organize After Insights",
   "dreamingAfterInsightDesc": "Update your profile from recent notes after an insight is ready",
-  "dreamingSwitchFailed": "Could not save the Dreaming setting. Please try again.",
+  "dreamingSwitchFailed": "Could not save the auto-organize setting. Please try again.",
   "releaseNotesTitle": "What's New",
   "releaseNotesUpgradeLede": "Here is what has been added since your last visit.",
   "releaseNotesCurrentLede": "Here is what this version adds.",
@@ -4806,7 +4806,7 @@
       }
     }
   },
-  "agentMemoryManageTitle": "Manage Memory",
+  "agentMemoryManageTitle": "View & Manage Memory",
   "agentMemoryManageSubtitle": "Inspect, correct, and manage traits and evidence remembered by Thoughter",
   "agentMemoryPageTitle": "Thoughter Memory",
   "agentMemoryResonanceSummary": "{profileCount} traits · {sliceCount} pulses · {factCount} facts",
@@ -4986,20 +4986,88 @@
   "@mmkvDiagnosticSpCoverage": {
     "description": "Label for SharedPreferences migration coverage"
   },
-  "aiTaskRoutingSectionTitle": "Assign Models by Task",
-  "aiTaskRoutingSectionDesc": "Tasks without a dedicated assignment automatically follow your default service above.",
+  "aiServiceEntrySectionTitle": "AI Services & Models",
+  "aiServiceEntrySummaryDefault": "All features use your primary model",
+  "aiServiceEntrySummaryTieredLight": "Light features use {provider}",
+  "@aiServiceEntrySummaryTieredLight": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "aiServiceEntrySummaryCustom": "Custom models set for {count, plural, =1{1 feature} other{{count} features}}",
+  "@aiServiceEntrySummaryCustom": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiFeaturesSectionTitle": "AI Features",
+  "aiServiceConfigTitle": "AI Services & Models",
+  "aiModelAllocationSectionTitle": "Model Assignment",
+  "aiRoutingModeTiered": "Basic Split",
+  "aiRoutingModeCustom": "Per Feature",
+  "aiRoutingTieredDesc": "Your primary model handles deeper chats and card layouts, while an optional lighter model takes care of quick prompts and background tidying.",
+  "aiTierPrimaryTitle": "Primary Model",
+  "aiTierPrimaryTasksHint": "Handles Thoughter chat, periodic insights, and AI card design",
+  "aiTierPrimarySelectSheetTitle": "Choose Primary Model",
+  "aiTierLightTitle": "Light Model",
+  "aiTierLightTasksHint": "Handles daily prompts, chat titles, and memory organization",
+  "aiTierFollowingPrimary": "Follow primary ({provider})",
+  "@aiTierFollowingPrimary": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTierFollowingPrimaryUnset": "Follow primary (unconfigured)",
+  "aiTierLightSelectSheetTitle": "Choose Light Model",
+  "aiTierFollowPrimaryOption": "Follow Primary Service",
+  "aiTierFollowPrimarySubtitle": "Current primary: {provider} ({model})",
+  "@aiTierFollowPrimarySubtitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTierFollowPrimaryUnsetSubtitle": "No primary service configured",
+  "aiTierLightSwitchedToPrimary": "Light model now follows your primary service",
+  "aiTierLightSwitchedToProvider": "Light model set to {provider}",
+  "@aiTierLightSwitchedToProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "lightModelBadge": "Light",
+  "aiTaskRoutingSectionTitle": "Assign Models by Feature",
+  "aiTaskRoutingSectionDesc": "Features without a dedicated model automatically follow your active service above.",
   "aiTaskDailyInsightTitle": "Daily Prompt",
-  "aiTaskPeriodicInsightTitle": "Periodic Insights (Week/Month/Year)",
-  "aiTaskDreamingTitle": "Memory Consolidation (Dreaming)",
-  "aiTaskAgentTitle": "Thoughter Chat & Tools",
+  "aiTaskPeriodicInsightTitle": "Periodic Insights",
+  "aiTaskDreamingTitle": "Memory Organization",
+  "aiTaskAgentTitle": "Thoughter Chat",
+  "aiTaskCardGenerationTitle": "AI Card Design",
+  "aiTaskSessionTitleTitle": "Chat Title",
   "aiTaskBadgeDailyInsight": "Daily",
   "aiTaskBadgePeriodicInsight": "Insights",
-  "aiTaskBadgeDreaming": "Dreaming",
+  "aiTaskBadgeDreaming": "Memory",
   "aiTaskBadgeAgent": "Thoughter",
+  "aiTaskBadgeCardGeneration": "Cards",
+  "aiTaskBadgeSessionTitle": "Titles",
   "aiTaskDailyInsightHint": "Frequent short prompts — fast, low-cost models work great",
   "aiTaskPeriodicInsightHint": "Summarizes note patterns — balanced models with natural prose",
-  "aiTaskDreamingHint": "Consolidates memory independently in the background — reasoning models excel here",
-  "aiTaskAgentHint": "Multi-turn chat & tool use — models with tool calling and long context recommended",
+  "aiTaskDreamingHint": "Tidies long-term preferences in the background when idle or after insights",
+  "aiTaskAgentHint": "Multi-turn chat & note actions — models with tool support and long context recommended",
+  "aiTaskCardGenerationHint": "Designs shareable note cards — models with strong layout sense work best",
+  "aiTaskSessionTitleHint": "Creates concise titles for new chats — fast, lightweight models shine here",
   "aiTaskFollowingDefault": "Follow default ({provider})",
   "@aiTaskFollowingDefault": {
     "placeholders": {
@@ -5060,10 +5128,13 @@
       }
     }
   },
-  "thoughterModelSwitcherTooltip": "Switch Thoughter chat model",
-  "thoughterModelUnconfigured": "No model configured",
-  "thoughterModelSheetTitle": "Switch Thoughter Model",
-  "thoughterModelSheetSubtitle": "Only changes the model for Thoughter without affecting your default service or other tasks",
-  "thoughterManageAiServices": "Manage AI Services",
+  "toolProgressModelUsed": "Generated with {model}",
+  "@toolProgressModelUsed": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
   "aiUnsupportedAnthropicMessagesProtocol": "Native Anthropic Messages (/v1/messages) is not supported yet. Please use an OpenAI-compatible base URL (/v1 or /chat/completions) or OpenRouter instead."
 }

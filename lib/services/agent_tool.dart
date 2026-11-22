@@ -203,6 +203,7 @@ class AgentResponse {
     List<ToolCall> toolCalls = const <ToolCall>[],
     List<ToolExecution> toolExecutions = const <ToolExecution>[],
     this.reachedMaxRounds = false,
+    this.modelLabel,
   })  : toolCalls = List<ToolCall>.unmodifiable(toolCalls),
         toolExecutions = List<ToolExecution>.unmodifiable(toolExecutions);
 
@@ -216,17 +217,22 @@ class AgentResponse {
       .toList(growable: false);
   final bool reachedMaxRounds;
 
+  /// 本轮实际完成生成的模型展示名（发生自动降级时记录降级后真正生效的模型）。
+  final String? modelLabel;
+
   AgentResponse copyWith({
     String? content,
     List<ToolCall>? toolCalls,
     List<ToolExecution>? toolExecutions,
     bool? reachedMaxRounds,
+    String? modelLabel,
   }) {
     return AgentResponse(
       content: content ?? this.content,
       toolCalls: toolCalls ?? this.toolCalls,
       toolExecutions: toolExecutions ?? this.toolExecutions,
       reachedMaxRounds: reachedMaxRounds ?? this.reachedMaxRounds,
+      modelLabel: modelLabel ?? this.modelLabel,
     );
   }
 

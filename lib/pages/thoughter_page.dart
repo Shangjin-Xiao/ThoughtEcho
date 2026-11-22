@@ -9,10 +9,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
-import '../constants/ai_provider_presets.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_task.dart';
-import '../models/multi_ai_settings.dart';
 import '../models/thoughter_entry.dart';
 import '../models/ai_insight_workflow_options.dart';
 import '../models/chat_message.dart' as app_chat;
@@ -26,6 +24,7 @@ import '../services/agent_service.dart'
     show
         AgentErrorEvent,
         AgentEvent,
+        AgentModelSelectedEvent,
         AgentNoteContext,
         AgentReasoningDeltaEvent,
         AgentResponseEvent,
@@ -40,14 +39,12 @@ import '../models/note_proposal_artifact.dart';
 import '../services/ai_service.dart';
 import '../services/agent_tools/ask_user_tool.dart';
 import '../services/agent_tools/propose_note_edit_tool.dart';
-import '../services/api_key_manager.dart';
 import '../services/chat_session_service.dart';
 import '../services/biometric_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
-import '../theme/app_semantic_colors.dart';
 import '../utils/ai_smart_result_utils.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/agent_history_builder.dart';
@@ -71,7 +68,6 @@ import 'thoughter/session_history_page.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/add_note_dialog_parts.dart' show TagSelectionSection;
 import '../widgets/app_snackbar.dart';
-import 'ai_settings_page.dart';
 import 'note_full_editor_page.dart';
 import '../theme/theme_style.dart';
 
@@ -96,6 +92,10 @@ class ThoughterPage extends StatefulWidget {
   /// 生成，模型也确实知道开场说了什么。
   final String? openingMessage;
 
+  /// 开场白来自哪种业务场景（周期洞察 / 今日思考提示），用于把周期元数据一并落库，
+  /// 让后续切换模型或跨轮对话依然知道「这段 / 这条」指哪段时间。
+  final ThoughterOpeningSource? openingSource;
+
   /// 洞察工作流要总结哪一段时间：周期（`week` / `month` / `year`）和落在
   /// 那个周期里的任意一天。
   ///
@@ -113,6 +113,7 @@ class ThoughterPage extends StatefulWidget {
     this.entrySource,
     this.exploreGuideSummary,
     this.openingMessage,
+    this.openingSource,
     this.insightPeriod,
     this.insightDate,
   });
@@ -287,17 +288,28 @@ class _ThoughterPageState extends State<ThoughterPage>
   List<ToolProgressItem>? _pendingToolItems;
   bool _pendingToolProgressInProgress = false;
   String? _pendingToolProgressThinkingText;
+  String? _pendingToolProgressModelLabel;
+  String? _pendingToolProgressSessionId;
+  int? _pendingToolProgressGeneration;
 
   void _scheduleToolProgressUpdate(
     String msgId,
     List<ToolProgressItem> items, {
     required bool inProgress,
     String? thinkingText,
+    String? modelLabel,
+    String? preferredSessionId,
+    int? originGeneration,
   }) {
     _pendingToolProgressMsgId = msgId;
     _pendingToolItems = items;
     _pendingToolProgressInProgress = inProgress;
     _pendingToolProgressThinkingText = thinkingText;
+    if (modelLabel != null && modelLabel.trim().isNotEmpty) {
+      _pendingToolProgressModelLabel = modelLabel.trim();
+    }
+    _pendingToolProgressSessionId = preferredSessionId;
+    _pendingToolProgressGeneration = originGeneration;
 
     if (_toolProgressThrottleTimer?.isActive ?? false) return;
 
@@ -315,6 +327,9 @@ class _ThoughterPageState extends State<ThoughterPage>
     }
     final inProgress = _pendingToolProgressInProgress;
     final thinkingText = _pendingToolProgressThinkingText;
+    final modelLabel = _pendingToolProgressModelLabel;
+    final preferredSessionId = _pendingToolProgressSessionId;
+    final originGeneration = _pendingToolProgressGeneration;
     // 同 _flushStreamUpdate：落地前先摘掉待写状态。
     _cancelToolProgressUpdate();
     _updateToolProgressMessage(
@@ -322,6 +337,9 @@ class _ThoughterPageState extends State<ThoughterPage>
       items,
       inProgress: inProgress,
       thinkingText: thinkingText,
+      modelLabel: modelLabel,
+      preferredSessionId: preferredSessionId,
+      originGeneration: originGeneration,
     );
   }
 
@@ -329,6 +347,9 @@ class _ThoughterPageState extends State<ThoughterPage>
     _toolProgressThrottleTimer?.cancel();
     _toolProgressThrottleTimer = null;
     _pendingToolProgressMsgId = null;
+    _pendingToolProgressModelLabel = null;
+    _pendingToolProgressSessionId = null;
+    _pendingToolProgressGeneration = null;
   }
   // ==================== 性能优化结束 ====================
 

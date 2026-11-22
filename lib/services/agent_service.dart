@@ -66,11 +66,19 @@ class AgentResponseEvent extends AgentEvent {
   final String content;
   final List<ToolCall> toolCalls;
   final bool reachedMaxRounds;
+  final String? modelLabel;
   AgentResponseEvent({
     required this.content,
     required this.toolCalls,
     this.reachedMaxRounds = false,
+    this.modelLabel,
   });
+}
+
+/// 本轮实际发起或切换到的模型标识（含频控降级后的实际模型）。
+class AgentModelSelectedEvent extends AgentEvent {
+  final String modelLabel;
+  AgentModelSelectedEvent(this.modelLabel);
 }
 
 /// Agent 出错
@@ -216,6 +224,25 @@ class AgentService extends ChangeNotifier {
 
   String _currentStatusKey = '';
   String get currentStatusKey => _currentStatusKey;
+
+  String? _lastUsedModelLabel;
+
+  /// 最近一次实际用于推理/回复的模型展示标签。
+  String? get lastUsedModelLabel => _lastUsedModelLabel;
+
+  /// 生成用于过程抽屉展示的服务商与模型标识。
+  static String formatModelLabel(
+    AIProviderSettings provider,
+    String actualModel,
+  ) {
+    final model = actualModel.trim();
+    final name = provider.name.trim();
+    if (model.isEmpty) return name;
+    if (name.isEmpty || name.toLowerCase() == model.toLowerCase()) {
+      return model;
+    }
+    return '$name · $model';
+  }
 
   /// 序列化后置记忆提取任务，防止并发会话导致竞态冲突
   Future<void> _postTurnMemoryLock = Future.value();
@@ -399,10 +426,17 @@ class AgentService extends ChangeNotifier {
       var consecutiveFailedToolRounds = 0;
       var emptyResponseRetries = 0;
       var round = 0;
+      var activeModelLabel = formatModelLabel(provider, provider.model);
+      _lastUsedModelLabel = activeModelLabel;
+      _emitEvent(AgentModelSelectedEvent(activeModelLabel), runId: runId);
 
       while (true) {
         if (!_shouldContinue(runId)) {
-          return AgentResponse(content: '', toolCalls: executedCalls);
+          return AgentResponse(
+            content: '',
+            toolCalls: executedCalls,
+            modelLabel: activeModelLabel,
+          );
         }
         if (round >= maxToolRounds) {
           _setStatus('', runId: runId);
@@ -410,15 +444,22 @@ class AgentService extends ChangeNotifier {
           final summary = await _requestFinalSummary(
             provider: provider,
             messages: messages,
+            runId: runId,
+            onModelSelected: (label) => activeModelLabel = label,
           );
           if (!_shouldContinue(runId)) {
-            return AgentResponse(content: '', toolCalls: executedCalls);
+            return AgentResponse(
+              content: '',
+              toolCalls: executedCalls,
+              modelLabel: activeModelLabel,
+            );
           }
           _emitEvent(
               AgentResponseEvent(
                 content: summary,
                 toolCalls: executedCalls,
                 reachedMaxRounds: true,
+                modelLabel: activeModelLabel,
               ),
               runId: runId);
           return AgentResponse(
@@ -426,6 +467,7 @@ class AgentService extends ChangeNotifier {
             toolCalls: executedCalls,
             toolExecutions: toolExecutions,
             reachedMaxRounds: true,
+            modelLabel: activeModelLabel,
           );
         }
         round++;
@@ -443,9 +485,16 @@ class AgentService extends ChangeNotifier {
           maxTokens: provider.maxTokens,
           runId: runId,
         );
+        if (result.modelLabel != null && result.modelLabel!.isNotEmpty) {
+          activeModelLabel = result.modelLabel!;
+        }
 
         if (!_shouldContinue(runId)) {
-          return AgentResponse(content: '', toolCalls: executedCalls);
+          return AgentResponse(
+            content: '',
+            toolCalls: executedCalls,
+            modelLabel: activeModelLabel,
+          );
         }
 
         if (result.content.trim().isEmpty && result.toolCalls.isEmpty) {
@@ -473,6 +522,7 @@ class AgentService extends ChangeNotifier {
               AgentResponseEvent(
                 content: responseContent,
                 toolCalls: executedCalls,
+                modelLabel: activeModelLabel,
               ),
               runId: runId);
 
@@ -492,6 +542,7 @@ class AgentService extends ChangeNotifier {
             content: responseContent,
             toolCalls: executedCalls,
             toolExecutions: toolExecutions,
+            modelLabel: activeModelLabel,
           );
         }
 
@@ -519,12 +570,14 @@ class AgentService extends ChangeNotifier {
               AgentResponseEvent(
                 content: assistantContent,
                 toolCalls: executedCalls,
+                modelLabel: activeModelLabel,
               ),
               runId: runId);
           return AgentResponse(
             content: assistantContent,
             toolCalls: executedCalls,
             toolExecutions: toolExecutions,
+            modelLabel: activeModelLabel,
           );
         }
 
@@ -737,12 +790,14 @@ class AgentService extends ChangeNotifier {
               AgentResponseEvent(
                 content: assistantContent,
                 toolCalls: executedCalls,
+                modelLabel: activeModelLabel,
               ),
               runId: runId);
           return AgentResponse(
             content: assistantContent,
             toolCalls: executedCalls,
             toolExecutions: toolExecutions,
+            modelLabel: activeModelLabel,
           );
         }
       }
@@ -798,16 +853,20 @@ class AgentService extends ChangeNotifier {
       );
     }
 
+    final preset = AIProviderPresets.bySlugOrId(provider.providerSlug) ??
+        AIProviderPresets.matchApiUrl(provider.apiUrl);
+    final requiresApiKey = preset?.requiresApiKey ?? true;
+
     final apiKey = await (_apiKeyResolver?.call(provider.id) ??
         _apiKeyManager.getProviderApiKey(provider.id));
-    if (apiKey.trim().isEmpty) {
+    if (requiresApiKey && apiKey.trim().isEmpty) {
       throw AgentRequestException(
         AgentFailureType.missingApiKey,
         providerName: provider.name,
       );
     }
 
-    return provider.copyWith(apiKey: apiKey);
+    return provider.copyWith(apiKey: apiKey.trim().isEmpty ? '' : apiKey);
   }
 
   Future<openai.ChatCompletion> _requestCompletion({
@@ -816,6 +875,8 @@ class AgentService extends ChangeNotifier {
     required List<openai.Tool> tools,
     required double temperature,
     required int maxTokens,
+    int? runId,
+    ValueChanged<String>? onModelSelected,
   }) async {
     _requestObserver?.call(
       messages: messages,
@@ -825,6 +886,12 @@ class AgentService extends ChangeNotifier {
       reasoningEffort: _reasoningEffortFor(provider),
     );
     if (_completionRequester != null) {
+      final label = formatModelLabel(provider, provider.model);
+      if (runId != null) {
+        _lastUsedModelLabel = label;
+        onModelSelected?.call(label);
+        _emitEvent(AgentModelSelectedEvent(label), runId: runId);
+      }
       return _completionRequester(
         provider: provider,
         messages: messages,
@@ -840,6 +907,7 @@ class AgentService extends ChangeNotifier {
     for (var i = 0; i < models.length; i++) {
       final currentModel = models[i];
       final currentProvider = provider.copyWith(model: currentModel);
+      final label = formatModelLabel(provider, currentModel);
 
       var backoffMs = 1500;
       for (var attempt = 0; attempt < 2; attempt++) {
@@ -850,6 +918,11 @@ class AgentService extends ChangeNotifier {
         );
 
         try {
+          if (runId != null) {
+            _lastUsedModelLabel = label;
+            onModelSelected?.call(label);
+            _emitEvent(AgentModelSelectedEvent(label), runId: runId);
+          }
           return await client.chat.completions.create(
             openai.ChatCompletionCreateRequest(
               model: currentModel,
@@ -918,22 +991,48 @@ class AgentService extends ChangeNotifier {
       streaming: true,
       reasoningEffort: _reasoningEffortFor(provider),
     );
-    // 测试注入路径：将非流式结果转换为流式结果
+    // 测试注入路径：将非流式结果转换为流式结果（同样走模型候选降级链）
     if (_completionRequester != null) {
-      final completion = await _completionRequester(
-        provider: provider,
-        messages: messages,
-        tools: tools,
-        temperature: temperature,
-        maxTokens: maxTokens,
-      );
-      final content = completion.choices.firstOrNull?.message.content ?? '';
-      final toolCalls =
-          completion.choices.firstOrNull?.message.toolCalls ?? const [];
-      if (_shouldContinue(runId) && content.isNotEmpty) {
-        _emitEvent(AgentTextDeltaEvent(content), runId: runId);
+      final models = _modelsToTryFor(provider);
+      Object? lastError;
+      for (final currentModel in models) {
+        final currentProvider = provider.copyWith(model: currentModel);
+        final label = formatModelLabel(provider, currentModel);
+        _lastUsedModelLabel = label;
+        _emitEvent(AgentModelSelectedEvent(label), runId: runId);
+        try {
+          final completion = await _completionRequester(
+            provider: currentProvider,
+            messages: messages,
+            tools: tools,
+            temperature: temperature,
+            maxTokens: maxTokens,
+          );
+          final content = completion.choices.firstOrNull?.message.content ?? '';
+          final toolCalls =
+              completion.choices.firstOrNull?.message.toolCalls ?? const [];
+          if (_shouldContinue(runId) && content.isNotEmpty) {
+            _emitEvent(AgentTextDeltaEvent(content), runId: runId);
+          }
+          return _StreamCompletionResult(
+            content: content,
+            toolCalls: toolCalls,
+            modelLabel: label,
+          );
+        } catch (e) {
+          lastError = e;
+          final errorStr = e.toString().toLowerCase();
+          final isRateLimit = errorStr.contains('429') ||
+              errorStr.contains('quota') ||
+              errorStr.contains('resource_exhausted') ||
+              errorStr.contains('503');
+          if (isRateLimit && currentModel != models.last) {
+            continue;
+          }
+          rethrow;
+        }
       }
-      return _StreamCompletionResult(content: content, toolCalls: toolCalls);
+      throw lastError ?? const AgentRequestException(AgentFailureType.unknown);
     }
 
     // 生产环境流式路径（支持 Gemini 请求控速、指数退避与自动降级）
@@ -943,6 +1042,7 @@ class AgentService extends ChangeNotifier {
     for (var i = 0; i < models.length; i++) {
       final currentModel = models[i];
       final currentProvider = provider.copyWith(model: currentModel);
+      final label = formatModelLabel(provider, currentModel);
 
       var backoffMs = 1500;
       for (var attempt = 0; attempt < 2; attempt++) {
@@ -955,6 +1055,8 @@ class AgentService extends ChangeNotifier {
         String? finishReason;
 
         try {
+          _lastUsedModelLabel = label;
+          _emitEvent(AgentModelSelectedEvent(label), runId: runId);
           final request = openai.ChatCompletionCreateRequest(
             model: currentModel,
             messages: messages,
@@ -1005,6 +1107,7 @@ class AgentService extends ChangeNotifier {
                 content: accumulator.content,
                 toolCalls: accumulator.toolCalls,
                 finishReason: finishReason,
+                modelLabel: label,
               );
             }
             rethrow;
@@ -1014,6 +1117,7 @@ class AgentService extends ChangeNotifier {
             content: accumulator.content,
             toolCalls: accumulator.toolCalls,
             finishReason: finishReason,
+            modelLabel: label,
           );
         } catch (e) {
           lastError = e;
@@ -1088,15 +1192,21 @@ class AgentService extends ChangeNotifier {
     return candidates.where(seen.add).toList();
   }
 
-  openai.OpenAIConfig _buildOpenAIConfig(AIProviderSettings provider) {
+  @visibleForTesting
+  static openai.OpenAIConfig buildOpenAIConfig(AIProviderSettings provider) {
     final normalizedUrl = normalizeOpenAIBaseUrl(provider.apiUrl);
     // Apply the same transport policy as the other AI request paths.
     if (!isSecureAiEndpoint(Uri.parse(normalizedUrl))) {
       throw const FormatException('非安全URL: 公网请求必须使用 HTTPS');
     }
 
+    final hasApiKey = provider.apiKey.trim().isNotEmpty;
     final headers = Map<String, String>.from(provider.buildHeaders())
-      ..removeWhere((key, _) => key.toLowerCase() == 'content-type');
+      ..removeWhere(
+        (key, _) =>
+            key.toLowerCase() == 'content-type' ||
+            (!hasApiKey && key.toLowerCase() == 'authorization'),
+      );
 
     if (provider.isOpenRouter) {
       headers['HTTP-Referer'] ??= 'https://thoughtecho.app';
@@ -1105,18 +1215,21 @@ class AgentService extends ChangeNotifier {
 
     return openai.OpenAIConfig(
       baseUrl: normalizedUrl,
-      authProvider: provider.apiKey.isNotEmpty
-          ? openai.ApiKeyProvider(provider.apiKey)
-          : null,
+      authProvider: hasApiKey ? openai.ApiKeyProvider(provider.apiKey) : null,
       defaultHeaders: headers,
       timeout: const Duration(minutes: 3),
       retryPolicy: const openai.RetryPolicy(maxRetries: 2),
     );
   }
 
+  openai.OpenAIConfig _buildOpenAIConfig(AIProviderSettings provider) =>
+      buildOpenAIConfig(provider);
+
   Future<String> _requestFinalSummary({
     required AIProviderSettings provider,
     required List<openai.ChatMessage> messages,
+    int? runId,
+    ValueChanged<String>? onModelSelected,
   }) async {
     final summaryMessages = <openai.ChatMessage>[
       ...messages,
@@ -1131,6 +1244,8 @@ class AgentService extends ChangeNotifier {
       tools: const [],
       temperature: 0.2,
       maxTokens: 1200,
+      runId: runId,
+      onModelSelected: onModelSelected,
     );
     final content = summary.text?.trim() ?? '';
     if (content.isEmpty) {
@@ -1377,24 +1492,37 @@ class AgentService extends ChangeNotifier {
     }
 
     if (history != null && history.isNotEmpty) {
-      final historyMessages = _requestHelper.createMessagesWithHistory(
-        systemPrompt: systemPrompt,
-        history: history,
-        currentUserMessageLength: userMessage.length,
-        maxChars: _historyMaxChars,
-        singleMessageCap: _historySingleMessageCap,
-      );
-
-      for (final item in historyMessages.skip(1)) {
-        final role = item['role']?.toString();
-        final content = item['content']?.toString() ?? '';
-        if (content.trim().isEmpty) {
-          continue;
+      var remainingHistory = history;
+      // 会话开场引文（周期洞察或每日提示）固定锚定在对话最上方，既不被长对话预算裁掉，
+      // 也不让单条消息字符裁剪截断 `</opening_context>` 闭合标签。
+      if (remainingHistory.first.parsedMeta?['type'] == 'opening_context') {
+        final openingMsg = remainingHistory.first;
+        remainingHistory = remainingHistory.sublist(1);
+        if (openingMsg.content.trim().isNotEmpty) {
+          messages.add(openai.ChatMessage.user(openingMsg.content));
         }
-        if (role == 'assistant') {
-          messages.add(openai.ChatMessage.assistant(content: content));
-        } else if (role == 'user') {
-          messages.add(openai.ChatMessage.user(content));
+      }
+
+      if (remainingHistory.isNotEmpty) {
+        final historyMessages = _requestHelper.createMessagesWithHistory(
+          systemPrompt: systemPrompt,
+          history: remainingHistory,
+          currentUserMessageLength: userMessage.length,
+          maxChars: _historyMaxChars,
+          singleMessageCap: _historySingleMessageCap,
+        );
+
+        for (final item in historyMessages.skip(1)) {
+          final role = item['role']?.toString();
+          final content = item['content']?.toString() ?? '';
+          if (content.trim().isEmpty) {
+            continue;
+          }
+          if (role == 'assistant') {
+            messages.add(openai.ChatMessage.assistant(content: content));
+          } else if (role == 'user') {
+            messages.add(openai.ChatMessage.user(content));
+          }
         }
       }
     }
@@ -2131,16 +2259,18 @@ $memoryGuidance## 应用特性（避免重复劳动）
   }
 }
 
-/// 流式补全结果（文本内容 + 工具调用列表 + 结束原因）
+/// 流式补全结果（文本内容 + 工具调用列表 + 结束原因 + 实际模型标签）
 class _StreamCompletionResult {
   final String content;
   final List<openai.ToolCall> toolCalls;
   final String? finishReason;
+  final String? modelLabel;
 
   const _StreamCompletionResult({
     required this.content,
     required this.toolCalls,
     this.finishReason,
+    this.modelLabel,
   });
 }
 

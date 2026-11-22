@@ -6,7 +6,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/thoughter_entry.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
@@ -30,7 +29,6 @@ import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/utils/agent_history_builder.dart';
-import 'package:thoughtecho/utils/aptabase_helper.dart';
 import 'package:thoughtecho/widgets/ai/experimental_badge.dart';
 import 'package:thoughtecho/widgets/ai/note_proposal_card.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
@@ -369,7 +367,7 @@ class _FakeAIService extends AIService {
   @override
   Future<String> generateSessionTitle(
     String firstMessage, {
-    AITask task = AITask.agent,
+    AITask task = AITask.sessionTitle,
   }) async {
     if (echoFirstMessageAsTitle) {
       return '标题:$firstMessage';
@@ -395,6 +393,7 @@ class _FakeAgentService extends AgentService {
     this.toolName = 'search_notes',
     Map<String, Object?>? toolArguments,
     this.toolResult = '搜索结果',
+    this.mockModelLabel,
     this.error,
   })  : effectiveToolArguments = Map<String, Object?>.unmodifiable(
           toolArguments ?? const <String, Object?>{},
@@ -428,8 +427,10 @@ class _FakeAgentService extends AgentService {
   final Duration postToolDelay;
   final String toolName;
   final String toolResult;
+  final String? mockModelLabel;
   final Object? error;
   AgentNoteContext? lastNoteContext;
+  List<app_chat.ChatMessage>? lastHistory;
   bool _mockIsRunning = false;
   String _mockStatusKey = '';
   bool stopRequested = false;
@@ -514,7 +515,13 @@ class _FakeAgentService extends AgentService {
     runCount++;
     stopRequested = false;
     lastNoteContext = noteContext;
+    lastHistory =
+        history == null ? null : List<app_chat.ChatMessage>.from(history);
     _setMockState(isRunning: true, statusKey: 'agentThinking');
+
+    if (mockModelLabel != null) {
+      _emitEvent(AgentModelSelectedEvent(mockModelLabel!));
+    }
 
     if (error != null) {
       _setMockState(isRunning: false, statusKey: '');
@@ -627,6 +634,7 @@ class _FakeAgentService extends AgentService {
           '',
         ),
         toolCalls: toolCalls,
+        modelLabel: mockModelLabel,
       ),
     );
     _setMockState(isRunning: false, statusKey: '');
@@ -634,6 +642,7 @@ class _FakeAgentService extends AgentService {
       content: responseContent,
       toolCalls: toolCalls,
       toolExecutions: toolExecutions,
+      modelLabel: mockModelLabel,
     );
   }
 
@@ -835,20 +844,6 @@ AppLocalizations _l10n(WidgetTester tester) {
     }
   }
   return (top: top ?? -1, bottom: bottom ?? -1);
-}
-
-class _FailingSaveThoughterSettingsService extends SettingsService {
-  _FailingSaveThoughterSettingsService(super.prefs);
-
-  Object? saveMultiError;
-
-  @override
-  Future<void> saveMultiAISettings(MultiAISettings settings) async {
-    if (saveMultiError != null) {
-      throw saveMultiError!;
-    }
-    return super.saveMultiAISettings(settings);
-  }
 }
 
 void main() {
@@ -4709,13 +4704,9 @@ void main() {
     });
 
     testWidgets(
-        'AppBar model switcher switches AITask.agent without mutating currentProviderId and disables while loading',
+        'AppBar renders clean single-row title without model switcher pill',
         (tester) async {
-      await settingsService.setDontShowAgentExperimentalNotice(true);
-      await settingsService.setAgentMemoryNoticeShown(true);
-      await settingsService.setExploreAiAssistantMode(
-        ThoughterPageMode.agent,
-      );
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
       await settingsService.saveMultiAISettings(
         const MultiAISettings(
           providers: [
@@ -4732,17 +4723,70 @@ void main() {
               apiUrl: 'https://openrouter.ai/api/v1',
               model: 'anthropic/claude-sonnet-4-5',
               providerSlug: 'openrouter',
-              enableThinking: true,
             ),
           ],
           currentProviderId: 'p_default',
         ),
       );
 
-      final pendingResponse = Completer<AgentResponse>();
-      final agentService = _ControllableAgentService(
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const ThoughterPage(
+            key: ValueKey('thoughter_clean_appbar_test'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text(l10n.aiAssistantLabel),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byType(ExperimentalBadge),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('thoughter_model_switcher')),
+        findsNothing,
+      );
+      expect(find.text('glm-4-flash'), findsNothing);
+      expect(find.text('anthropic/claude-sonnet-4-5'), findsNothing);
+    });
+
+    testWidgets(
+        'tool progress sheet shows actual turn model attribution and persists across reload while plain text stream stays clean',
+        (tester) async {
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_default',
+              name: 'Default Flash',
+              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+              model: 'glm-4-flash',
+            ),
+          ],
+          currentProviderId: 'p_default',
+        ),
+      );
+
+      final agentService = _FakeAgentService(
         settingsService: settingsService,
-        responses: [pendingResponse],
+        simulateToolProgress: true,
+        mockModelLabel: 'Fallback Pro · claude-sonnet-4-5',
+        responseContent: '这是整理后的洞察补充',
       );
 
       await tester.pumpWidget(
@@ -4751,167 +4795,149 @@ void main() {
           chatSessionService: chatSessionService,
           agentService: agentService,
           child: const ThoughterPage(
-            key: ValueKey('thoughter_model_switcher_test'),
+            key: ValueKey('thoughter_model_footer_live'),
             entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Initially follows default -> displays glm-4-flash
-      final switcher = find.byKey(const ValueKey('thoughter_model_switcher'));
-      expect(switcher, findsOneWidget);
-      expect(find.text('glm-4-flash'), findsOneWidget);
-
-      // Tap switcher -> select Claude Sonnet for AITask.agent
-      await tester.tap(switcher);
-      await tester.pumpAndSettle();
-
-      await tester.tap(
-        find.byKey(const ValueKey('thoughter_model_option_p_agent_pro')),
-      );
-      await tester.pumpAndSettle();
-
-      expect(settingsService.multiAISettings.currentProviderId, 'p_default');
-      expect(
-        settingsService.multiAISettings.taskProviderIds[AITask.agent],
-        'p_agent_pro',
-      );
-      expect(find.text('anthropic/claude-sonnet-4-5'), findsOneWidget);
-
-      // Dismiss info SnackBar so it does not overlap the bottom composer send button
-      ScaffoldMessenger.of(tester.element(find.byType(ThoughterPage)))
-          .clearSnackBars();
-      await tester.pumpAndSettle();
-
-      // Start an in-flight agent request -> switcher must be disabled while _isLoading == true
-      await tester.enterText(find.byType(TextField), '测试流式进行中禁用切换');
-      await tester.pump();
-      tester
-          .widget<IconButton>(
-            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
-          )
-          .onPressed!();
-      await tester.pump();
-
-      expect(tester.widget<InkWell>(switcher).onTap, isNull);
-
-      // Complete agent request -> switcher re-enables
-      pendingResponse.complete(
-        AgentResponse(content: '已完成回复'),
-      );
+      await _submitInput(tester, '查一下我最近的想法');
       await _settleAgentTurn(tester);
-      await tester.pumpAndSettle();
-      expect(tester.widget<InkWell>(switcher).onTap, isNotNull);
-    });
-
-    testWidgets(
-        'AppBar model switcher clears persisted disabled binding on follow default and shows error SnackBar on save failure',
-        (tester) async {
-      final prefs = await SharedPreferences.getInstance();
-      final failingSettings = _FailingSaveThoughterSettingsService(prefs);
-      addTearDown(failingSettings.dispose);
-      await failingSettings.setDontShowAgentExperimentalNotice(true);
-      await failingSettings.setAgentMemoryNoticeShown(true);
-      await failingSettings.setExploreAiAssistantMode(ThoughterPageMode.agent);
-      await failingSettings.saveMultiAISettings(
-        const MultiAISettings(
-          providers: [
-            AIProviderSettings(
-              id: 'p_default',
-              name: 'Default Flash',
-              apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
-              model: 'glm-4-flash',
-              isEnabled: true,
-            ),
-            AIProviderSettings(
-              id: 'p_disabled_agent',
-              name: 'Disabled Agent',
-              apiUrl: 'https://openrouter.ai/api/v1',
-              model: 'anthropic/claude-sonnet-4-5',
-              isEnabled: false,
-            ),
-            AIProviderSettings(
-              id: 'p_backup_agent',
-              name: 'Backup Agent',
-              apiUrl: 'https://api.deepseek.com/v1',
-              model: 'deepseek-chat',
-              isEnabled: true,
-            ),
-          ],
-          currentProviderId: 'p_default',
-          taskProviderIds: {AITask.agent: 'p_disabled_agent'},
-        ),
-      );
-
-      final events = <Map<String, dynamic>>[];
-      AptabaseHelper.onTrackEventForTesting = (event, props) {
-        events.add({'event': event, 'props': props});
-      };
-      addTearDown(() => AptabaseHelper.onTrackEventForTesting = null);
-
-      await tester.pumpWidget(
-        await _buildHarness(
-          settingsService: failingSettings,
-          chatSessionService: chatSessionService,
-          child: const ThoughterPage(
-            key: ValueKey('thoughter_disabled_binding_test'),
-            entrySource: ThoughterEntrySource.explore,
-          ),
-        ),
-      );
       await tester.pumpAndSettle();
       final l10n = _l10n(tester);
 
-      // 1. Selecting "Follow default" removes stale disabled binding from taskProviderIds
-      final switcher = find.byKey(const ValueKey('thoughter_model_switcher'));
-      await tester.tap(switcher);
-      await tester.pumpAndSettle();
-
-      await tester.tap(
-        find.byKey(const ValueKey('thoughter_model_option_default')),
+      // Main message stream never displays model footer directly
+      expect(
+        find.byKey(const ValueKey('tool_progress_model_footer')),
+        findsNothing,
       );
+
+      // Open tool process sheet -> displays actual fallback model label
+      await tester.tap(find.byTooltip(l10n.viewToolProcess));
       await tester.pumpAndSettle();
 
       expect(
-        failingSettings.multiAISettings.taskProviderIds
-            .containsKey(AITask.agent),
-        isFalse,
-      );
-
-      ScaffoldMessenger.of(tester.element(find.byType(ThoughterPage)))
-          .clearSnackBars();
-      await tester.pumpAndSettle();
-      events.clear();
-
-      // 2. When saveMultiAISettings fails, shows localized error SnackBar and skips telemetry
-      failingSettings.saveMultiError = StateError('模拟存储故障');
-      await tester.tap(switcher);
-      await tester.pumpAndSettle();
-
-      await tester.tap(
-        find.byKey(const ValueKey('thoughter_model_option_p_backup_agent')),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.textContaining(
-          l10n.saveSettingsError('Bad state: 模拟存储故障'),
-        ),
+        find.byKey(const ValueKey('tool_progress_model_footer')),
         findsOneWidget,
       );
       expect(
-        failingSettings.multiAISettings.taskProviderIds
-            .containsKey(AITask.agent),
-        isFalse,
+        find.text(
+          l10n.toolProgressModelUsed('Fallback Pro · claude-sonnet-4-5'),
+        ),
+        findsOneWidget,
+      );
+
+      // Close sheet and verify modelLabel was persisted in SQLite metaJson
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+
+      final savedSession = chatSessionService.sessions.single;
+      final savedMessages =
+          chatSessionService.storedMessages[savedSession.id] ?? const [];
+      final progressMsg = savedMessages.firstWhere(
+        (m) => m.parsedMeta?['type'] == 'tool_progress',
       );
       expect(
-        events.any(
-          (e) =>
-              e['event'] == 'feature_used' &&
-              e['props']?['action'] == 'ai_task_provider_select',
+        progressMsg.parsedMeta?['modelLabel'],
+        'Fallback Pro · claude-sonnet-4-5',
+      );
+
+      // Remount ThoughterPage loading the persisted session -> footer still shows
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: ThoughterPage(
+            key: const ValueKey('thoughter_model_footer_reloaded'),
+            entrySource: ThoughterEntrySource.explore,
+            session: savedSession,
+          ),
         ),
-        isFalse,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip(l10n.viewToolProcess));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          l10n.toolProgressModelUsed('Fallback Pro · claude-sonnet-4-5'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+        'periodic insight opening message preserves quote UI while persisting opening_context metadata and forwarding structured history',
+        (tester) async {
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [
+            AIProviderSettings(
+              id: 'p_main',
+              name: 'Main Service',
+              apiUrl: 'https://api.openai.com/v1',
+              model: 'gpt-4o',
+            ),
+          ],
+          currentProviderId: 'p_main',
+        ),
+      );
+
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        responseContent: '第一点背后其实是你对节奏变化的敏感。',
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: ThoughterPage(
+            key: const ValueKey('thoughter_opening_context_test'),
+            entrySource: ThoughterEntrySource.explore,
+            openingMessage: '本周你在深夜记录了三次灵感。',
+            openingSource: ThoughterOpeningSource.periodicInsight,
+            insightPeriod: 'week',
+            insightDate: DateTime(2026, 4, 8),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Quote block UI shows the opening text cleanly without XML tags
+      expect(find.text('本周你在深夜记录了三次灵感。'), findsOneWidget);
+      expect(find.textContaining('<opening_context'), findsNothing);
+
+      // Follow up with coreference ("展开说说这条")
+      await _submitInput(tester, '展开说说这条');
+      await _settleAgentTurn(tester);
+      await tester.pumpAndSettle();
+
+      // Verify persisted opening message carries structured opening_context metadata
+      final savedSessionId = chatSessionService.sessions.single.id;
+      final savedMessages =
+          chatSessionService.storedMessages[savedSessionId] ?? const [];
+      final openingStored = savedMessages.first;
+      expect(openingStored.content, '本周你在深夜记录了三次灵感。');
+      expect(openingStored.parsedMeta?['type'], 'opening_context');
+      expect(openingStored.parsedMeta?['source'], 'periodic_insight');
+      expect(openingStored.parsedMeta?['period'], 'week');
+      expect(openingStored.parsedMeta?['rangeStart'], '2026-04-06');
+      expect(openingStored.parsedMeta?['rangeEnd'], '2026-04-12');
+
+      // Verify AgentService received the opening message with opening_context metadata in history
+      expect(agentService.lastHistory, isNotNull);
+      expect(
+        agentService.lastHistory!.first.parsedMeta?['type'],
+        'opening_context',
+      );
+      expect(
+        agentService.lastHistory!.first.parsedMeta?['source'],
+        'periodic_insight',
       );
     });
   });

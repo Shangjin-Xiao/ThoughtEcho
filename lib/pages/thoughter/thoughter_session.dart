@@ -756,7 +756,7 @@ extension _ThoughterSession on _ThoughterPageState {
     String firstUserMessage,
   ) {
     _aiService
-        .generateSessionTitle(firstUserMessage, task: AITask.agent)
+        .generateSessionTitle(firstUserMessage, task: AITask.sessionTitle)
         .then((title) async {
       if (title.isNotEmpty && title != 'Chat') {
         await _chatSessionService.updateSessionTitle(
@@ -843,9 +843,28 @@ extension _ThoughterSession on _ThoughterPageState {
     final l10n = AppLocalizations.of(context);
 
     // 调用方给了现成的开场白（每日提示、周期洞察）：直接用它开场，
-    // 并且纳入上下文——否则模型不知道第一句说了什么。
+    // 并且连同来源与时间范围一起落库——后续跨模型对话或长对话裁剪后，
+    // 模型依然清楚「这段 / 这条」指哪一段洞察及对应的日期区间。
     final opening = widget.openingMessage?.trim();
     if (opening != null && opening.isNotEmpty) {
+      final effectiveSource = widget.openingSource ??
+          ((widget.insightPeriod != null || widget.insightDate != null)
+              ? ThoughterOpeningSource.periodicInsight
+              : ThoughterOpeningSource.dailyPrompt);
+      final openingMeta = <String, dynamic>{
+        'type': 'opening_context',
+        'source': effectiveSource.storageValue,
+      };
+      if (effectiveSource == ThoughterOpeningSource.periodicInsight) {
+        openingMeta['period'] = _insightPeriod;
+        openingMeta['periodLabel'] =
+            ReportPeriodLabels.label(l10n, _insightPeriod, _insightDate);
+        final range = ReportPeriodUtils.dateRange(_insightPeriod, _insightDate);
+        if (range != null) {
+          openingMeta['rangeStart'] = _formatOpeningIsoDate(range.start);
+          openingMeta['rangeEnd'] = _formatOpeningIsoDate(range.end);
+        }
+      }
       _appendMessage(
         app_chat.ChatMessage(
           id: _uuid.v4(),
@@ -853,6 +872,7 @@ extension _ThoughterSession on _ThoughterPageState {
           isUser: false,
           role: 'assistant',
           timestamp: DateTime.now(),
+          metaJson: jsonEncode(openingMeta),
         ),
         persist: true,
       );
@@ -1177,6 +1197,13 @@ extension _ThoughterSession on _ThoughterPageState {
         ),
       ),
     );
+  }
+
+  String _formatOpeningIsoDate(DateTime date) {
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
   }
 
   DatabaseService? _tryGetDatabaseService() {

@@ -2143,6 +2143,10 @@ void main() {
         expect(afterEditRow['created_at_backup'], '2026-10-01T09:00:00.5');
         expect(afterEditRow['updated_at_backup'], '2026-10-01T09:00:00.5');
 
+        final remoteSyncUpdatedAt = DateTime.now()
+            .toUtc()
+            .add(const Duration(minutes: 5))
+            .toIso8601String();
         await svc.mergeChatSection(<String, dynamic>{
           'format': 1,
           'sessions': <Object?>[],
@@ -2153,7 +2157,7 @@ void main() {
               'role': 'user',
               'content': '远端同步三次修订正文',
               'created_at': '2026-11-21T05:00:00.000000Z',
-              'updated_at': '2026-11-22T06:00:00.000000Z',
+              'updated_at': remoteSyncUpdatedAt,
             },
           ],
           'tombstones': <Object?>[],

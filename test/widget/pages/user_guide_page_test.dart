@@ -8,10 +8,11 @@ import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/widgets/app_empty_animation.dart';
 
 Widget _buildTestApp({
+  Locale locale = const Locale('zh'),
   bool disableAnimations = true,
 }) {
   return MaterialApp(
-    locale: const Locale('zh'),
+    locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     theme: ThemeData(
@@ -93,6 +94,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyAnimation), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('加载并展示更新后的中英文 AI 服务与模型分配指南内容', (tester) async {
+    await tester.pumpWidget(_buildTestApp(locale: const Locale('zh')));
+    await _pumpUntilLoaded(tester);
+
+    final zhChapter = find.widgetWithText(ExpansionTile, 'AI 服务配置');
+    await tester.ensureVisible(zhChapter);
+    await tester.tap(zhChapter);
+    await tester.pumpAndSettle();
+
+    expect(find.text('多服务商与模型分配'), findsOneWidget);
+    expect(find.textContaining('基础分配（默认）'), findsOneWidget);
+    expect(find.textContaining('按功能自选'), findsOneWidget);
+    expect(find.textContaining('点击列表中的其他服务'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    rootBundle.clear();
+
+    await tester.pumpWidget(_buildTestApp(locale: const Locale('en')));
+    await _pumpUntilLoaded(tester);
+
+    final enChapter = find.widgetWithText(
+      ExpansionTile,
+      'AI Service Configuration',
+    );
+    await tester.ensureVisible(enChapter);
+    await tester.tap(enChapter);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Multi-Provider & Model Assignment'), findsOneWidget);
+    expect(find.textContaining('Basic Split (Default)'), findsOneWidget);
+    expect(find.textContaining('Per Feature'), findsOneWidget);
+    expect(
+      find.textContaining('tap another service in "My AI Services"'),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 }

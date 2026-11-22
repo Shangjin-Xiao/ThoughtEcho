@@ -433,5 +433,152 @@ void main() {
       });
       expect(malformed.taskProviderIds, {AITask.dreaming: 'default_p'});
     });
+
+    test('AITask parses cardGeneration and sessionTitle and exposes tier sets',
+        () {
+      expect(AITask.tryParse('cardGeneration'), AITask.cardGeneration);
+      expect(AITask.tryParse('sessionTitle'), AITask.sessionTitle);
+      expect(AITask.tryParse('unknown_future_task'), isNull);
+      expect(AITask.customDisplayOrder, [
+        AITask.agent,
+        AITask.dailyInsight,
+        AITask.periodicInsight,
+        AITask.cardGeneration,
+        AITask.sessionTitle,
+        AITask.dreaming,
+      ]);
+      expect(AITask.cardGeneration.usesLightTier, isFalse);
+      expect(AITask.sessionTitle.usesLightTier, isTrue);
+    });
+
+    test(
+        'tiered mode routes primary vs light tasks and falls back to primary when light is unset, disabled, or deleted',
+        () {
+      const tieredWithLight = MultiAISettings(
+        providers: [
+          defaultProvider,
+          fastProvider,
+          reasoningProvider,
+          disabledProvider,
+        ],
+        currentProviderId: 'reason_p',
+        routingMode: AIRoutingMode.tiered,
+        lightProviderId: 'fast_p',
+      );
+
+      expect(tieredWithLight.routingMode, AIRoutingMode.tiered);
+      // Primary tasks -> reason_p
+      expect(
+          tieredWithLight.resolveProviderForTask(AITask.agent)?.id, 'reason_p');
+      expect(
+        tieredWithLight.resolveProviderForTask(AITask.periodicInsight)?.id,
+        'reason_p',
+      );
+      expect(
+        tieredWithLight.resolveProviderForTask(AITask.cardGeneration)?.id,
+        'reason_p',
+      );
+      // Light tasks -> fast_p
+      expect(
+        tieredWithLight.resolveProviderForTask(AITask.dailyInsight)?.id,
+        'fast_p',
+      );
+      expect(
+        tieredWithLight.resolveProviderForTask(AITask.sessionTitle)?.id,
+        'fast_p',
+      );
+      expect(
+        tieredWithLight.resolveProviderForTask(AITask.dreaming)?.id,
+        'fast_p',
+      );
+
+      // Disabled light provider -> falls back to primary
+      final disabledLight = tieredWithLight.withLightProvider('disabled_p');
+      expect(disabledLight.lightProvider, isNull);
+      expect(
+        disabledLight.resolveProviderForTask(AITask.dailyInsight)?.id,
+        'reason_p',
+      );
+
+      // Deleting light provider cleans lightProviderId and falls back to primary
+      final afterDelete = tieredWithLight.withoutProvider('fast_p');
+      expect(afterDelete.lightProviderId, isNull);
+      expect(
+        afterDelete.resolveProviderForTask(AITask.sessionTitle)?.id,
+        'reason_p',
+      );
+    });
+
+    test(
+        'switching from tiered to custom pre-fills light tasks when taskProviderIds is empty, and infers routingMode on legacy JSON',
+        () {
+      const tiered = MultiAISettings(
+        providers: [defaultProvider, fastProvider],
+        currentProviderId: 'default_p',
+        routingMode: AIRoutingMode.tiered,
+        lightProviderId: 'fast_p',
+      );
+
+      final switchedCustom = tiered.withRoutingMode(AIRoutingMode.custom);
+      expect(switchedCustom.routingMode, AIRoutingMode.custom);
+      expect(switchedCustom.taskProviderIds, {
+        AITask.dailyInsight: 'fast_p',
+        AITask.sessionTitle: 'fast_p',
+        AITask.dreaming: 'fast_p',
+      });
+      expect(
+        switchedCustom.resolveProviderForTask(AITask.agent)?.id,
+        'default_p',
+      );
+      expect(
+        switchedCustom.resolveProviderForTask(AITask.sessionTitle)?.id,
+        'fast_p',
+      );
+
+      // Legacy JSON with non-empty taskProviderIds and no routingMode -> custom
+      final legacyCustom = MultiAISettings.fromJson({
+        'providers': [defaultProvider.toJson(), fastProvider.toJson()],
+        'currentProviderId': 'default_p',
+        'taskProviderIds': {'cardGeneration': 'fast_p'},
+      });
+      expect(legacyCustom.routingMode, AIRoutingMode.custom);
+      expect(
+        legacyCustom.resolveProviderForTask(AITask.cardGeneration)?.id,
+        'fast_p',
+      );
+
+      // Legacy JSON with empty taskProviderIds and no routingMode -> tiered
+      final legacyTiered = MultiAISettings.fromJson({
+        'providers': [defaultProvider.toJson()],
+        'currentProviderId': 'default_p',
+      });
+      expect(legacyTiered.routingMode, AIRoutingMode.tiered);
+
+      // Legacy JSON with dedicated agent provider migrates sessionTitle to preserve privacy
+      final legacyAgentOnly = MultiAISettings.fromJson({
+        'providers': [defaultProvider.toJson(), reasoningProvider.toJson()],
+        'currentProviderId': 'default_p',
+        'taskProviderIds': {'agent': 'reason_p'},
+      });
+      expect(legacyAgentOnly.routingMode, AIRoutingMode.custom);
+      expect(
+        legacyAgentOnly.resolveProviderForTask(AITask.sessionTitle)?.id,
+        'reason_p',
+      );
+
+      // Clearing all custom assignments to Follow Default persists across tiered -> custom switches and JSON reloads
+      final clearedCustom = switchedCustom
+          .withTaskProvider(AITask.dailyInsight, null)
+          .withTaskProvider(AITask.sessionTitle, null)
+          .withTaskProvider(AITask.dreaming, null);
+      expect(clearedCustom.taskProviderIds, isEmpty);
+      expect(clearedCustom.customRoutingInitialized, isTrue);
+
+      final reloadedCleared = MultiAISettings.fromJson(clearedCustom.toJson());
+      final backToTiered =
+          reloadedCleared.withRoutingMode(AIRoutingMode.tiered);
+      final backToCustom = backToTiered.withRoutingMode(AIRoutingMode.custom);
+      expect(backToCustom.taskProviderIds, isEmpty);
+    });
   });
 }

@@ -89,12 +89,14 @@ class ToolProgressSnapshot {
   final List<ToolProgressItem> items;
   final bool inProgress;
   final String? thinkingText;
+  final String? modelLabel;
 
   const ToolProgressSnapshot({
     required this.title,
     required this.items,
     this.inProgress = false,
     this.thinkingText,
+    this.modelLabel,
   });
 }
 
@@ -218,6 +220,16 @@ class _ToolProgressSheetBody extends StatelessWidget {
                 _ToolProgressDetailItem(item: item, l10n: l10n),
                 if (item.thinkingText?.trim().isNotEmpty == true)
                   _ProcessThinkingBlock(text: item.thinkingText!.trim()),
+              ],
+              if (data.modelLabel?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 12),
+                Text(
+                  key: const ValueKey('tool_progress_model_footer'),
+                  l10n.toolProgressModelUsed(data.modelLabel!.trim()),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ],
           ),
@@ -394,6 +406,9 @@ class ToolProgressPanel extends StatefulWidget {
   /// 工具调用前的简短思考说明
   final String? thinkingText;
 
+  /// 本轮实际参与生成的模型展示名，仅在抽屉底部以次级视觉权重展示。
+  final String? modelLabel;
+
   const ToolProgressPanel({
     super.key,
     required this.title,
@@ -402,6 +417,7 @@ class ToolProgressPanel extends StatefulWidget {
     this.doneIcon,
     this.accentColor,
     this.thinkingText,
+    this.modelLabel,
   });
 
   @override
@@ -420,6 +436,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
         items: widget.items,
         inProgress: widget.inProgress,
         thinkingText: widget.thinkingText,
+        modelLabel: widget.modelLabel,
       );
 
   /// 抽屉开着的时候 Agent 还在跑，快照要跟着走。

@@ -1204,7 +1204,13 @@ void main() {
       expect(afterEdit.basisWatermark, isNull);
       expect(afterEdit.basisNoteCount, isNull);
 
-      // 合入另一台设备较旧的 thoughter taste 以及另一条覆盖更多笔记的 dreaming taste，用户手动修改均必须胜出！
+      // 合入另一台设备较旧的 thoughter taste 以及另一条覆盖更多笔记的较新 dreaming taste，用户手动修改均必须胜出！
+      final futureDreamingObservedAt =
+          DateTime.now().toUtc().add(const Duration(days: 1)).toIso8601String();
+      final futureDreamingBasisAt = DateTime.now()
+          .toUtc()
+          .add(const Duration(hours: 23))
+          .toIso8601String();
       await memory.mergeMemorySection(
         <String, dynamic>{
           'format': 1,
@@ -1222,11 +1228,11 @@ void main() {
               'id': 'newer_dreaming_taste',
               'kind': 'taste',
               'directive': '另一台设备全量笔记自动归纳品味',
-              'observed_at': '2026-12-01T08:00:00.000Z',
-              'updated_at': '2026-12-01T08:00:00.000Z',
+              'observed_at': futureDreamingObservedAt,
+              'updated_at': futureDreamingObservedAt,
               'status': 'active',
               'source': 'dreaming',
-              'basis_watermark': '2026-12-01T07:00:00.000Z',
+              'basis_watermark': futureDreamingBasisAt,
               'basis_note_count': 50,
             },
           ],

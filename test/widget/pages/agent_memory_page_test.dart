@@ -535,7 +535,7 @@ void main() {
       expect(find.text('过期的临时切片'), findsNothing);
     });
 
-    testWidgets('AISettingsPage 包含「管理记忆」入口并可点击跳转', (tester) async {
+    testWidgets('AISettingsPage 包含「查看与管理记忆」入口并可点击跳转', (tester) async {
       _setLargeSurfaceSize(tester);
       await tester.runAsync(() async {
         await memoryService.rememberProfile(
@@ -554,7 +554,7 @@ void main() {
       );
       await _settleWithRealAsync(tester);
 
-      final manageTile = find.text('管理记忆');
+      final manageTile = find.text('查看与管理记忆');
       expect(manageTile, findsOneWidget);
       expect(find.text('查看、纠偏与管理 Thoughter 记下的特质与依据'), findsOneWidget);
 
