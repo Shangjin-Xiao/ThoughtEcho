@@ -663,33 +663,43 @@ extension _ThoughterSession on _ThoughterPageState {
   ///
   /// 与 [_persistMessageSafely] 不同，此路径不因页面已进入 `dispose` 卸载而放弃写库，
   /// 确保用户退出页面后再次进入对话时，[AgentHistoryBuilder] 能读到显式的已取消标记；
-  /// 同时在销毁态绝不新建会话，也不触碰已卸载的 UI 上下文。
+  /// 同时仅原地更新仍存在于库中的消息行，绝不重新插入已被后台同步删除的消息记录。
   Future<void> _persistCancelledAskUserMessage(
     app_chat.ChatMessage message, {
     required String sessionId,
     required int originGeneration,
     required bool allowLiveRebuild,
+    Future<String?>? initialPersistFuture,
   }) async {
     try {
+      if (initialPersistFuture != null) {
+        try {
+          await initialPersistFuture;
+        } catch (_) {}
+      }
       if (_rebuildingDeletedSessionFuture != null) {
         try {
           await _rebuildingDeletedSessionFuture;
         } catch (_) {}
       }
-      var targetSessionId = _resolveReplacedSessionId(
+      final targetSessionId = _resolveReplacedSessionId(
         sessionId,
         originGeneration: originGeneration,
       );
-      var persisted = await _chatSessionService.tryAddMessage(
+      final updatedExisting =
+          await _chatSessionService.tryUpdateExistingMessage(
         targetSessionId,
         message,
       );
-      if (!persisted && allowLiveRebuild && mounted && !_isDisposed) {
-        await _persistMessageSafely(
-          message,
-          preferredSessionId: targetSessionId,
-          originGeneration: originGeneration,
-        );
+      if (!updatedExisting && allowLiveRebuild && mounted && !_isDisposed) {
+        final exists = await _chatSessionService.sessionExists(targetSessionId);
+        if (exists == false && mounted && !_isDisposed) {
+          await _persistMessageSafely(
+            message,
+            preferredSessionId: targetSessionId,
+            originGeneration: originGeneration,
+          );
+        }
       }
     } catch (e) {
       logDebug('持久化已取消澄清消息失败: ${message.id} - $e');

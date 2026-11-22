@@ -1881,6 +1881,104 @@ WHERE s.id IN ($placeholders)
     await tryAddMessage(sessionId, message);
   }
 
+  /// 仅当目标会话与目标消息行在库中均仍存在时原地更新消息，绝不插入已删除的消息行。
+  ///
+  /// 用于页面销毁或取消挂起交互（如 `ask_user`）时的状态回写：若后台同步已通过消息墓碑或
+  /// 会话清空截止线删除了该消息（而父会话因更新消息仍然存活），返回 `false` 而不重新插入，
+  /// 避免用较新的 `updated_at` 复活已被同步删除的记录。
+  Future<bool> tryUpdateExistingMessage(
+    String sessionId,
+    ChatMessage message,
+  ) async {
+    if (sessionId.isEmpty || message.id.isEmpty) return false;
+    var updated = false;
+    try {
+      final nowUtcIso = LWWUtils.formatFixedUtcIso(DateTime.now());
+      final messageCreatedUtcIso =
+          LWWUtils.formatFixedUtcIso(message.timestamp);
+      await _persistOrQueueWrite((db) async {
+        await db.transaction((txn) async {
+          final sessionRows = await txn.query(
+            'chat_sessions',
+            columns: const <String>['id'],
+            where: 'id = ?',
+            whereArgs: <Object?>[sessionId],
+            limit: 1,
+          );
+          if (sessionRows.isEmpty) {
+            return;
+          }
+          final existingRows = await txn.query(
+            'chat_messages',
+            columns: const <String>['created_at', 'updated_at'],
+            where: 'id = ? AND session_id = ?',
+            whereArgs: <Object?>[message.id, sessionId],
+            limit: 1,
+          );
+          if (existingRows.isEmpty) {
+            return;
+          }
+
+          final existing = existingRows.first;
+          final existingCreated = existing['created_at'];
+          final existingUpdated = existing['updated_at'];
+          if (!LWWUtils.isCanonicalFixedUtcIso(existingCreated) ||
+              !LWWUtils.isCanonicalFixedUtcIso(existingUpdated)) {
+            await addColumnIfMissing(
+              txn,
+              tableName: 'chat_messages',
+              columnName: 'created_at_backup',
+              definition: 'TEXT',
+            );
+            await addColumnIfMissing(
+              txn,
+              tableName: 'chat_messages',
+              columnName: 'updated_at_backup',
+              definition: 'TEXT',
+            );
+            await txn.rawUpdate(
+              'UPDATE chat_messages SET '
+              'created_at_backup = COALESCE(created_at_backup, created_at), '
+              'updated_at_backup = COALESCE(updated_at_backup, updated_at) '
+              'WHERE id = ? AND session_id = ?',
+              <Object?>[message.id, sessionId],
+            );
+          }
+
+          final row = message.toMap(sessionId);
+          row['created_at'] = messageCreatedUtcIso;
+          row['updated_at'] = nowUtcIso;
+          final affected = await txn.update(
+            'chat_messages',
+            row,
+            where: 'id = ? AND session_id = ?',
+            whereArgs: <Object?>[message.id, sessionId],
+          );
+          if (affected > 0) {
+            await txn.update(
+              'chat_sessions',
+              <String, Object?>{'last_active_at': nowUtcIso},
+              where: 'id = ?',
+              whereArgs: <Object?>[sessionId],
+            );
+            updated = true;
+          }
+        });
+      }, operationName: 'ChatSessionService.tryUpdateExistingMessage');
+    } catch (e) {
+      logError(
+        'ChatSessionService.tryUpdateExistingMessage 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return false;
+    }
+    if (updated) {
+      notifyListeners();
+    }
+    return updated;
+  }
+
   /// 检查指定会话是否仍然存在于数据库中。
   ///
   /// 返回 `null` 表示数据库暂不可读（未就绪或查询异常），调用方不应把读库失败

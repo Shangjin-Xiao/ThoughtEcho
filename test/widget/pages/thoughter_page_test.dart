@@ -59,6 +59,8 @@ Finder _noteProposalCardKey() => find.byWidgetPredicate(
     );
 
 class _InMemoryChatSessionService extends ChatSessionService {
+  _InMemoryChatSessionService() : super(openOwnDatabase: false);
+
   final Map<String, ChatSession> _sessions = <String, ChatSession>{};
   final Map<String, List<app_chat.ChatMessage>> _messages =
       <String, List<app_chat.ChatMessage>>{};
@@ -144,6 +146,24 @@ class _InMemoryChatSessionService extends ChatSessionService {
   }
 
   @override
+  Future<bool> tryUpdateExistingMessage(
+    String sessionId,
+    app_chat.ChatMessage message,
+  ) async {
+    if (simulateWriteFailure || !_sessions.containsKey(sessionId)) {
+      return false;
+    }
+    final list = _messages[sessionId];
+    if (list == null) return false;
+    final existingIdx = list.indexWhere((m) => m.id == message.id);
+    if (existingIdx < 0) {
+      return false;
+    }
+    list[existingIdx] = message;
+    return true;
+  }
+
+  @override
   Future<bool?> sessionExists(String sessionId) async {
     if (simulateReadFailure) return null;
     final gate = loadGates[sessionId];
@@ -189,10 +209,36 @@ class _InMemoryChatSessionService extends ChatSessionService {
     _messages.remove(sessionId);
   }
 
+  @override
+  Future<bool> deleteEmptySession(String sessionId) async {
+    if (!_sessions.containsKey(sessionId)) return false;
+    final hasUserMsg = _messages[sessionId]?.any((m) => m.isUser) ?? false;
+    if (hasUserMsg) return false;
+    deletedSessionIds.add(sessionId);
+    _sessions.remove(sessionId);
+    _messages.remove(sessionId);
+    return true;
+  }
+
   /// 模拟远端同步删除会话并广播变更通知。
   void simulateRemoteDeleteSession(String sessionId) {
     _sessions.remove(sessionId);
     _messages.remove(sessionId);
+    notifyListeners();
+  }
+
+  /// 模拟远端同步删除某条历史消息（例如会话清空截止线或单条消息墓碑），同时父会话因更新消息仍然保留。
+  void simulateRemoteDeleteMessage(
+    String sessionId,
+    String messageId, {
+    app_chat.ChatMessage? survivingNewerMessage,
+  }) {
+    final list = _messages[sessionId];
+    list?.removeWhere((m) => m.id == messageId);
+    if (survivingNewerMessage != null) {
+      (list ?? _messages.putIfAbsent(sessionId, () => <app_chat.ChatMessage>[]))
+          .add(survivingNewerMessage);
+    }
     notifyListeners();
   }
 
@@ -4530,6 +4576,101 @@ void main() {
         reason: '标题更新目标必须与实际写入会话一致（原会话 A）',
       );
       expect(updatedReplacementB.title, '标题:会话A首轮历史提问');
+    });
+
+    testWidgets(
+        'popping ThoughterPage after sync deletes pending ask_user message in surviving session does not resurrect deleted message',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateAskUser: true,
+      );
+      await settingsService.setExploreAiAssistantMode(
+        ThoughterPageMode.agent,
+      );
+      final session = ChatSession(
+        id: 'surviving-session-deleted-ask-user',
+        sessionType: 'agent',
+        title: '远端删除单条澄清消息但保留会话',
+        createdAt: DateTime(2026, 9, 7, 10),
+        lastActiveAt: DateTime(2026, 9, 7, 10),
+      );
+      chatSessionService.seedSession(session, const <app_chat.ChatMessage>[]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: Builder(
+            builder: (ctx) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const ValueKey('open_deleted_ask_user_route_btn'),
+                  onPressed: () {
+                    Navigator.of(ctx).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ThoughterPage(
+                          key: const ValueKey('deleted_ask_user_routed_page'),
+                          entrySource: ThoughterEntrySource.explore,
+                          session: session,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('打开对话'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const ValueKey('open_deleted_ask_user_route_btn')),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '发起一个稍后会被远端删除的澄清');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(find.text('模拟提问：请选择'), findsOneWidget);
+
+      final beforeSyncMsgs = await chatSessionService.getMessages(session.id);
+      final askUserMsg = beforeSyncMsgs.singleWhere(
+        (m) => m.parsedMeta?['type'] == 'ask_user',
+      );
+
+      // 模拟后台同步：对端通过清空截止线或消息墓碑删除了该 ask_user 消息，但凭借另一条更新消息保留了父会话
+      chatSessionService.simulateRemoteDeleteMessage(
+        session.id,
+        askUserMsg.id,
+        survivingNewerMessage: app_chat.ChatMessage(
+          id: 'peer-newer-surviving-msg',
+          role: 'user',
+          isUser: true,
+          content: '另一台设备保留会话的新消息',
+          timestamp: DateTime(2026, 9, 7, 11),
+        ),
+      );
+      await tester.pump();
+
+      // 用户直接返回退出页面触发 dispose -> _cancelPendingAskUser
+      Navigator.of(tester.element(find.byType(ThoughterPage))).pop();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      final afterPopMsgs = await chatSessionService.getMessages(session.id);
+      expect(
+        afterPopMsgs.any((m) => m.id == askUserMsg.id),
+        isFalse,
+        reason: '已被同步删除的挂起 ask_user 消息绝不能因退出页面回写取消状态而被重新插入复活',
+      );
+      expect(
+        afterPopMsgs.any((m) => m.id == 'peer-newer-surviving-msg'),
+        isTrue,
+      );
     });
   });
 }

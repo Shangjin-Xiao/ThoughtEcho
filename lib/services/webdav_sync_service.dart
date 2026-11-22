@@ -117,6 +117,18 @@ class _RemoteChatShardInfo {
   final DateTime? lastModified;
 }
 
+class _SingleDigestSink implements Sink<Digest> {
+  Digest? value;
+
+  @override
+  void add(Digest data) {
+    value = data;
+  }
+
+  @override
+  void close() {}
+}
+
 // Retained as an internal backward-compatible alias for RemoteMediaFileInfo.
 // ignore: unused_element
 typedef _RemoteMediaFileInfo = RemoteMediaFileInfo;
@@ -757,10 +769,11 @@ class WebDAVSyncService extends ChangeNotifier {
         }
       }
 
+      final localMainZipFile = File(tempZipPath);
       final uploadedMainSnapshot = await _uploadSyncZipWithConflictProtection(
         dio,
         remoteSyncZipUrl,
-        File(tempZipPath),
+        localMainZipFile,
         remoteSyncFile,
       );
 
@@ -780,10 +793,9 @@ class WebDAVSyncService extends ChangeNotifier {
           dio,
           chatShardsDirUrl,
           remoteSyncZipUrl: remoteSyncZipUrl,
+          localMainZipFile: localMainZipFile,
           expectedMainEtag: uploadedMainSnapshot.etag,
           expectedMainContentLength: uploadedMainSnapshot.contentLength,
-          expectedMainSha256: uploadedMainSnapshot.sha256Hex,
-          expectedMainMd5: uploadedMainSnapshot.md5Hex,
           activeShardFiles: activeShardFileSet,
           protectedShardFiles: retiredFromPreviousManifest,
           staleMinAge: effectiveShardCleanupMinAge,
@@ -1458,22 +1470,14 @@ class WebDAVSyncService extends ChangeNotifier {
     }
   }
 
-  Future<
-      ({
-        String? etag,
-        int contentLength,
-        String sha256Hex,
-        String md5Hex,
-      })> _uploadSyncZipWithConflictProtection(
+  Future<({String? etag, int contentLength})>
+      _uploadSyncZipWithConflictProtection(
     Dio dio,
     String fileUrl,
     File zipFile,
     _RemoteSyncFileMetadata remoteSyncFile,
   ) async {
-    final fileBytes = await zipFile.readAsBytes();
-    final fileLen = fileBytes.length;
-    final sha256Hex = sha256.convert(fileBytes).toString().toLowerCase();
-    final md5Hex = md5.convert(fileBytes).toString().toLowerCase();
+    final fileLen = await zipFile.length();
     final headers = <String, Object>{
       Headers.contentTypeHeader: 'application/zip',
       Headers.contentLengthHeader: fileLen,
@@ -1508,7 +1512,7 @@ class WebDAVSyncService extends ChangeNotifier {
     try {
       final response = await dio.put<void>(
         fileUrl,
-        data: Stream<List<int>>.value(fileBytes),
+        data: zipFile.openRead(),
         options: Options(headers: headers),
       );
       final responseEtag = response.headers.value('etag')?.trim();
@@ -1517,8 +1521,6 @@ class WebDAVSyncService extends ChangeNotifier {
             ? responseEtag
             : null,
         contentLength: fileLen,
-        sha256Hex: sha256Hex,
-        md5Hex: md5Hex,
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
@@ -3062,22 +3064,112 @@ class WebDAVSyncService extends ChangeNotifier {
     }
   }
 
+  /// 当 PUT 或 PROPFIND 未提供强 ETag 时，按上限流式读取云端主同步包并核验其字节数与 SHA-256 是否与本地刚上传的主包完全一致。
+  ///
+  /// 返回：
+  /// - `true`：云端主包与本地刚上传的包逐字节一致，归属确认；
+  /// - `false`：云端主包长度或内容哈希已变化，说明已被其他客户端并发替换；
+  /// - `null`：网络或服务端临时异常，无法判定归属，需保留待清理标记延后重试。
+  Future<bool?> _verifyRemoteMainZipMatchesLocalUpload(
+    Dio dio,
+    String remoteSyncZipUrl, {
+    required File localMainZipFile,
+    required int expectedMainContentLength,
+  }) async {
+    if (expectedMainContentLength < 0 ||
+        expectedMainContentLength > _maxRemoteSyncBytes ||
+        !await localMainZipFile.exists()) {
+      return null;
+    }
+    final expectedSha256 =
+        (await sha256.bind(localMainZipFile.openRead()).first)
+            .toString()
+            .toLowerCase();
+
+    Response<ResponseBody> response;
+    try {
+      response = await dio.get<ResponseBody>(
+        remoteSyncZipUrl,
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: const <String, Object>{
+            HttpHeaders.acceptEncodingHeader: 'identity',
+          },
+        ),
+      );
+    } catch (e) {
+      logDebug('流式复核云端主同步包归属失败，延后分片清理: $e', source: 'WebDAVSyncService');
+      return null;
+    }
+
+    final body = response.data;
+    if (body == null) {
+      return null;
+    }
+    final declaredLen = int.tryParse(
+      response.headers.value(Headers.contentLengthHeader) ?? '',
+    );
+    if (declaredLen != null && declaredLen != expectedMainContentLength) {
+      await body.stream.listen(null).cancel();
+      return false;
+    }
+
+    final digestSink = _SingleDigestSink();
+    final hashInput = sha256.startChunkedConversion(digestSink);
+    var receivedBytes = 0;
+    final sub = body.stream.listen(null);
+    final completer = Completer<bool?>();
+    sub.onData((Uint8List chunk) {
+      receivedBytes += chunk.length;
+      if (receivedBytes > expectedMainContentLength ||
+          receivedBytes > _maxRemoteSyncBytes) {
+        unawaited(sub.cancel());
+        if (!completer.isCompleted) {
+          completer.complete(false);
+        }
+        return;
+      }
+      hashInput.add(chunk);
+    });
+    sub.onError((Object e, StackTrace st) {
+      logDebug('读取云端主同步包复核流中断，延后分片清理: $e', source: 'WebDAVSyncService');
+      if (!completer.isCompleted) {
+        completer.complete(null);
+      }
+    });
+    sub.onDone(() {
+      if (completer.isCompleted) return;
+      if (receivedBytes != expectedMainContentLength) {
+        completer.complete(false);
+        return;
+      }
+      hashInput.close();
+      final actualSha256 = digestSink.value?.toString().toLowerCase();
+      if (actualSha256 == null) {
+        completer.complete(null);
+        return;
+      }
+      completer.complete(actualSha256 == expectedSha256);
+    });
+    return completer.future;
+  }
+
   /// 清理已退役且超过跨端保护宽限期的孤儿分片，返回是否仍余待后续轮次清理的候选分片。
   ///
   /// 安全门禁：
   /// 1. 始终在主同步包发布后重新列举 `chat_shards/` 目录，绝不复用上传前的旧目录快照；
   /// 2. 仅依据 WebDAV 服务端自身 HTTP `Date` 响应头时钟与分片 `getlastmodified` 计算年龄，
   ///    绝不回退使用可能存在大幅偏差的本机时钟；
-  /// 3. 真正发起 `DELETE` 前再次复核云端 `thoughtecho_sync.zip` 的指纹（ETag / 大小）仍与本轮刚发布的快照一致，
+  /// 3. 真正发起 `DELETE` 前再次复核云端 `thoughtecho_sync.zip` 仍为本轮刚发布的同一份快照
+  ///    （强 ETag 一致，或在缺失强 ETag 时流式核验云端主包字节长度与 SHA-256 一致），
   ///    一旦检测到另一台客户端在此期间已发布新主包，立即中止删除，由新主包持有方接管分片生命周期。
   Future<bool> _cleanupStaleRemoteChatShards(
     Dio dio,
     String chatShardsDirUrl, {
     required String remoteSyncZipUrl,
+    required File localMainZipFile,
     required String? expectedMainEtag,
     required int expectedMainContentLength,
-    required String expectedMainSha256,
-    required String expectedMainMd5,
     required Set<String> activeShardFiles,
     required Set<String> protectedShardFiles,
     required Duration staleMinAge,
@@ -3119,7 +3211,7 @@ class WebDAVSyncService extends ChangeNotifier {
       }
 
       // 执行物理删除前复核云端主包未被其他设备并发更新覆盖：
-      // 仅信任本轮 PUT 直接返回的 ETag 与本地上传包自身的精确字节长度/哈希，绝不在 PUT 后用额外 PROPFIND 补采指纹。
+      // 优先比对 PUT 与 PROPFIND 均返回的强 ETag；若任一方未提供强 ETag，则流式核验云端主包的精确字节长度与 SHA-256。
       final latestMainMeta = await _getRemoteSyncFileMetadata(
         dio,
         remoteSyncZipUrl,
@@ -3127,36 +3219,32 @@ class WebDAVSyncService extends ChangeNotifier {
       if (!latestMainMeta.exists) {
         return true;
       }
-      if (expectedMainEtag != null && expectedMainEtag.isNotEmpty) {
-        if (latestMainMeta.etag == null ||
-            latestMainMeta.etag != expectedMainEtag) {
-          // 云端主包已被其他设备更新（或无法校验 ETag 一致性），立即放弃本轮删除。
-          return false;
-        }
-        if (latestMainMeta.contentLength != null &&
-            latestMainMeta.contentLength != expectedMainContentLength) {
+      if (latestMainMeta.contentLength != null &&
+          latestMainMeta.contentLength != expectedMainContentLength) {
+        return false;
+      }
+      final strongExpectedEtag = MediaFingerprintCache.cleanStrongEtag(
+        expectedMainEtag,
+      );
+      final strongLatestEtag = MediaFingerprintCache.cleanStrongEtag(
+        latestMainMeta.etag,
+      );
+      if (strongExpectedEtag != null && strongLatestEtag != null) {
+        if (strongLatestEtag != strongExpectedEtag) {
           return false;
         }
       } else {
-        if (latestMainMeta.contentLength == null) {
-          // PUT 未返回 ETag 且 PROPFIND 亦未提供字节长度时，无法确认主包归属，延后清理。
+        final verified = await _verifyRemoteMainZipMatchesLocalUpload(
+          dio,
+          remoteSyncZipUrl,
+          localMainZipFile: localMainZipFile,
+          expectedMainContentLength: expectedMainContentLength,
+        );
+        if (verified == null) {
           return true;
         }
-        if (latestMainMeta.contentLength != expectedMainContentLength) {
+        if (!verified) {
           return false;
-        }
-        final strongLatestEtag = MediaFingerprintCache.cleanStrongEtag(
-          latestMainMeta.etag,
-        );
-        if (strongLatestEtag != null) {
-          if (_sha256HexPattern.hasMatch(strongLatestEtag) &&
-              strongLatestEtag.toLowerCase() != expectedMainSha256) {
-            return false;
-          }
-          if (_md5HexPattern.hasMatch(strongLatestEtag) &&
-              strongLatestEtag.toLowerCase() != expectedMainMd5) {
-            return false;
-          }
         }
       }
 

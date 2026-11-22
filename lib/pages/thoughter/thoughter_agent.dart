@@ -350,7 +350,7 @@ extension _ThoughterAgent on _ThoughterPageState {
         );
 
         _pendingAskUserMessage = askMsg;
-        _appendMessage(
+        _pendingAskUserInitialPersistFuture = _appendMessage(
           askMsg,
           persist: true,
           preferredSessionId: capturedAskSessionId,
@@ -933,6 +933,7 @@ extension _ThoughterAgent on _ThoughterPageState {
       _pendingAskUserSessionId = null;
       _pendingAskUserGeneration = null;
       _pendingAskUserMessage = null;
+      _pendingAskUserInitialPersistFuture = null;
     }
   }
 

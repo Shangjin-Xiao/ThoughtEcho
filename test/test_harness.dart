@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -155,7 +156,7 @@ final class TestHarness {
     _root = null;
 
     if (root != null) {
-      await _deleteDirectoryWithRetry(root);
+      await _deleteDirectoryWithRetry(root, ignoreFinalFailure: true);
     }
   }
 
@@ -175,7 +176,10 @@ final class TestHarness {
     await _deleteDirectoryWithRetry(directory);
   }
 
-  static Future<void> _deleteDirectoryWithRetry(Directory directory) async {
+  static Future<void> _deleteDirectoryWithRetry(
+    Directory directory, {
+    bool ignoreFinalFailure = false,
+  }) async {
     const maxAttempts = 6;
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       if (!await directory.exists()) {
@@ -186,9 +190,13 @@ final class TestHarness {
         return;
       } on FileSystemException {
         if (attempt == maxAttempts - 1) {
+          if (ignoreFinalFailure) {
+            return;
+          }
           rethrow;
         }
-        await Future<void>.delayed(Duration(milliseconds: 20 * (1 << attempt)));
+        final backoff = Duration(milliseconds: 20 * (1 << attempt));
+        await Zone.root.run(() => Future<void>.delayed(backoff));
       }
     }
   }

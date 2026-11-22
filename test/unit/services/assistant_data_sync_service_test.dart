@@ -25,6 +25,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:thoughtecho/utils/lww_utils.dart';
 
 import '../../test_harness.dart';
 
@@ -2177,6 +2178,9 @@ void main() {
       var omitServerDateHeader = false;
       var omitPutEtagHeader = false;
       var assignFreshModifiedOnPut = false;
+      var failVerifyMainZipGetAfterNextPut = false;
+      var failNextMainZipGetWith503 = false;
+      String? customEtagOverrideOnPut;
       final remoteFiles = <String, List<int>>{};
       final remoteEtags = <String, String>{};
       final remoteModified = <String, DateTime>{};
@@ -2184,8 +2188,8 @@ void main() {
       final putShardPaths = <String>[];
       Completer<void>? pauseCleanupListGate;
       Completer<void>? cleanupListPausedSignal;
-      Completer<void>? pauseAfterMainZipPutGate;
-      Completer<void>? afterMainZipPutPausedSignal;
+      Completer<void>? pauseBeforeMainVerifyGate;
+      Completer<void>? beforeMainVerifyPausedSignal;
 
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() => server.close(force: true));
@@ -2241,6 +2245,16 @@ void main() {
                 '</d:multistatus>',
               );
             } else if (remoteFiles.containsKey(path)) {
+              if (path == '/dav/thoughtecho/thoughtecho_sync.zip') {
+                final verifyGate = pauseBeforeMainVerifyGate;
+                final verifySignal = beforeMainVerifyPausedSignal;
+                if (verifyGate != null &&
+                    verifySignal != null &&
+                    !verifySignal.isCompleted) {
+                  verifySignal.complete();
+                  await verifyGate.future;
+                }
+              }
               response.statusCode = 207;
               response.write(
                 '<d:multistatus xmlns:d="DAV:"><d:response>'
@@ -2260,6 +2274,12 @@ void main() {
               response.statusCode = 404;
             }
           case 'GET':
+            if (path == '/dav/thoughtecho/thoughtecho_sync.zip' &&
+                failNextMainZipGetWith503) {
+              failNextMainZipGetWith503 = false;
+              response.statusCode = 503;
+              break;
+            }
             final data = remoteFiles[path];
             if (data == null) {
               response.statusCode = 404;
@@ -2268,6 +2288,7 @@ void main() {
                 response.headers
                     .set(HttpHeaders.etagHeader, remoteEtags[path]!);
               }
+              response.headers.contentLength = data.length;
               response.statusCode = 200;
               response.add(data);
             }
@@ -2280,7 +2301,7 @@ void main() {
               break;
             }
             remoteFiles[path] = body;
-            final newEtag = '"etag-${etagSeq++}"';
+            final newEtag = customEtagOverrideOnPut ?? '"etag-${etagSeq++}"';
             remoteEtags[path] = newEtag;
             remoteModified[path] = assignFreshModifiedOnPut
                 ? nowServerUtc.subtract(const Duration(minutes: 1))
@@ -2288,22 +2309,15 @@ void main() {
             if (path.startsWith('/dav/thoughtecho/chat_shards/')) {
               putShardPaths.add(path);
             }
+            if (path == '/dav/thoughtecho/thoughtecho_sync.zip' &&
+                failVerifyMainZipGetAfterNextPut) {
+              failVerifyMainZipGetAfterNextPut = false;
+              failNextMainZipGetWith503 = true;
+            }
             if (!omitPutEtagHeader) {
               response.headers.set(HttpHeaders.etagHeader, newEtag);
             }
             response.statusCode = 204;
-            await response.close();
-            if (path == '/dav/thoughtecho/thoughtecho_sync.zip') {
-              final putGate = pauseAfterMainZipPutGate;
-              final putSignal = afterMainZipPutPausedSignal;
-              if (putGate != null &&
-                  putSignal != null &&
-                  !putSignal.isCompleted) {
-                putSignal.complete();
-                await putGate.future;
-              }
-            }
-            return;
           case 'DELETE':
             deletedShardPaths.add(path);
             remoteFiles.remove(path);
@@ -2525,16 +2539,17 @@ void main() {
           );
         }
 
-        // 3b) PUT 不返回 ETag 响应头：A 在刚完成主包 PUT 后挂起，B 随即发布新主包，
-        //     A 恢复执行后绝不能把 B 的主包指纹误采为本端指纹而误删 B 的活跃分片
+        // 3b) PUT 不返回 ETag 响应头且服务端使用非哈希不透明 ETag（如 "etag-N"）：
+        //     让 A 在列完 chat_shards/ 目录（已将旧分片纳入 staleCandidates）后、
+        //     收到主包复核 PROPFIND 响应前真正挂起；期间 B 完成同步发布新主包，
+        //     甚至令云端新主包与 A 刚上传的主包保持完全相同的字节长度但内容不同。
+        //     A 恢复执行后必须通过流式 SHA-256 校验识别出主包已被替换，零误删 B 的活跃分片！
         omitPutEtagHeader = true;
-        // A 先拉取当前状态后删除 sessionB 以构造体积不同的内联主包上传
         await HttpOverrides.runWithHttpOverrides(
           () => webdavA.triggerSync(),
           _LoopbackHttpOverrides(server.port),
         );
         await chatService.deleteSession(sessionB.id);
-        // B 追加一条更新消息，确保稍后 B 同步时击败删除墓碑并再次发布分片主包
         await chatB.addMessage(
           sessionB.id,
           ChatMessage(
@@ -2546,17 +2561,21 @@ void main() {
           ),
         );
 
-        pauseAfterMainZipPutGate = Completer<void>();
-        afterMainZipPutPausedSignal = Completer<void>();
+        // 先挂起 cleanup 的 chat_shards/ PROPFIND（确保 A 已完成主包 PUT 并进入 _cleanupStaleRemoteChatShards）
+        pauseCleanupListGate = Completer<void>();
+        cleanupListPausedSignal = Completer<void>();
         final syncANoEtagFuture = HttpOverrides.runWithHttpOverrides(
           () => webdavA.triggerSync(),
           _LoopbackHttpOverrides(server.port),
         );
-        await afterMainZipPutPausedSignal.future;
+        await cleanupListPausedSignal.future;
 
-        final heldPutGate = pauseAfterMainZipPutGate;
-        pauseAfterMainZipPutGate = null;
-        afterMainZipPutPausedSignal = null;
+        final aUploadedMainBytes = List<int>.from(
+          remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip']!,
+        );
+        final heldListGateFor3b = pauseCleanupListGate;
+        pauseCleanupListGate = null;
+        cleanupListPausedSignal = null;
 
         await HttpOverrides.runWithHttpOverrides(
           () => webdavB.triggerSync(),
@@ -2575,14 +2594,38 @@ void main() {
               DateTime.utc(2020, 1, 1, 0, 0, 0);
         }
 
+        // 在 B 完成同步后再挂载主包复核 PROPFIND 门禁并放行 A 的分片目录列举：
+        // 此时 B 的活跃分片已在目录中且 mtime 为旧值，必被 A 列入非空 staleCandidates，
+        // 随后 A 在主包复核 PROPFIND 请求处真正阻塞等待！
+        pauseBeforeMainVerifyGate = Completer<void>();
+        beforeMainVerifyPausedSignal = Completer<void>();
+        heldListGateFor3b.complete();
+        await beforeMainVerifyPausedSignal.future;
+
+        final bRealMainBytes = List<int>.from(
+          remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip']!,
+        );
+        // 进一步构造极端同长度覆盖：将云端主包替换为与 A 上传主包字节长度完全相等但内容不同的载荷，且保留不透明 ETag
+        final equalLengthDifferentMainBytes =
+            List<int>.from(aUploadedMainBytes);
+        equalLengthDifferentMainBytes[
+            equalLengthDifferentMainBytes.length - 1] ^= 0xFF;
+        remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip'] =
+            equalLengthDifferentMainBytes;
+        remoteEtags['/dav/thoughtecho/thoughtecho_sync.zip'] =
+            '"etag-opaque-same-len"';
+
         deletedShardPaths.clear();
-        heldPutGate.complete();
+        final heldVerifyGate = pauseBeforeMainVerifyGate;
+        pauseBeforeMainVerifyGate = null;
+        beforeMainVerifyPausedSignal = null;
+        heldVerifyGate.complete();
         await syncANoEtagFuture;
         expect(webdavA.syncStatus, WebDAVSyncStatus.success);
         expect(
           deletedShardPaths,
           isEmpty,
-          reason: 'PUT 未返回 ETag 时，不得把并发设备新发布的主包指纹误认成本端上传并误删分片',
+          reason: 'PUT 未返回 ETag 且对端新主包碰巧同字节长度并携带不透明 ETag 时，流式 SHA-256 复核必须拦截误删',
         );
         for (final shardFile in bRevivedShards) {
           expect(
@@ -2590,14 +2633,65 @@ void main() {
             isTrue,
           );
         }
+
+        // 恢复 B 的真实主包以便后续正常拉取合并
+        remoteFiles['/dav/thoughtecho/thoughtecho_sync.zip'] = bRealMainBytes;
+
+        // 3c & 3d) PUT 不返回 ETag，且服务端 PROPFIND 返回非 MD5 的 32 位十六进制不透明 ETag（如 Apache/Nextcloud 文件 ID）：
+        //          - 当归属复核 GET 临时返回 503 时，延后删除并保留 webdav_pending_chat_shard_cleanup 供下轮重试；
+        //          - 下一轮正常流式核验 SHA-256 一致后，成功清理已退役超期孤儿分片并清除待清理标记，绝不永久滞留分片！
+        customEtagOverrideOnPut = '"0123456789abcdef0123456789abcdef"';
+        const retiredOrphanShard =
+            'shard_2222222222222222222222222222222222222222222222222222222222222222.zip';
+        remoteFiles['/dav/thoughtecho/chat_shards/$retiredOrphanShard'] = <int>[
+          7,
+          7,
+          7
+        ];
+        remoteModified['/dav/thoughtecho/chat_shards/$retiredOrphanShard'] =
+            DateTime.utc(2020, 1, 1, 0, 0, 0);
+
+        deletedShardPaths.clear();
+        failVerifyMainZipGetAfterNextPut = true;
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(webdavB.syncStatus, WebDAVSyncStatus.success);
+        expect(
+          deletedShardPaths,
+          isEmpty,
+          reason: '流式归属复核 GET 返回 503 时无法确认归属，本轮应暂缓物理删除',
+        );
+        expect(
+          AppPreferencesService().getBool('webdav_pending_chat_shard_cleanup'),
+          isTrue,
+          reason: '流式归属复核因临时网络/5xx 失败时必须保留待清理标记，以便下轮同步自动重试',
+        );
+
+        // 下轮同步（即使无新增分片变动），流式 SHA-256 核验通过后成功清理超期退役分片并复位标记
+        await HttpOverrides.runWithHttpOverrides(
+          () => webdavB.triggerSync(),
+          _LoopbackHttpOverrides(server.port),
+        );
+        expect(webdavB.syncStatus, WebDAVSyncStatus.success);
+        expect(
+          deletedShardPaths,
+          contains('/dav/thoughtecho/chat_shards/$retiredOrphanShard'),
+          reason: '即使服务端返回非 MD5 的 32 位十六进制不透明 ETag，流式 SHA-256 核验通过后也必须正常回收退役分片',
+        );
+        expect(
+          AppPreferencesService().getBool('webdav_pending_chat_shard_cleanup'),
+          isFalse,
+        );
       } finally {
         final lingering = pauseCleanupListGate;
         if (lingering != null && !lingering.isCompleted) {
           lingering.complete();
         }
-        final lingeringPut = pauseAfterMainZipPutGate;
-        if (lingeringPut != null && !lingeringPut.isCompleted) {
-          lingeringPut.complete();
+        final lingeringVerify = pauseBeforeMainVerifyGate;
+        if (lingeringVerify != null && !lingeringVerify.isCompleted) {
+          lingeringVerify.complete();
         }
         webdavB.dispose();
         await chatB.close();
@@ -2607,6 +2701,96 @@ void main() {
           await dirPeer.delete(recursive: true);
         }
       }
+    });
+
+    test(
+        'tryUpdateExistingMessage updates existing row in place and refuses to resurrect sync-deleted message in surviving session',
+        () async {
+      final session = await chatService.createSession(
+        sessionType: 'agent',
+        title: '澄清消息更新与删除边界会话',
+      );
+      final askMsg = ChatMessage(
+        id: 'ask_user_sqlite_1',
+        role: 'assistant',
+        isUser: false,
+        content: '请选择导出格式',
+        timestamp: DateTime.utc(2026, 11, 20, 9, 0),
+        metaJson: jsonEncode(<String, Object?>{
+          'type': 'ask_user',
+          'isCompleted': false,
+          'isCancelled': false,
+        }),
+      );
+      expect(await chatService.tryAddMessage(session.id, askMsg), isTrue);
+
+      final cancelledAskMsg = askMsg.copyWith(
+        metaJson: jsonEncode(<String, Object?>{
+          'type': 'ask_user',
+          'isCompleted': true,
+          'isCancelled': true,
+        }),
+      );
+      expect(
+        await chatService.tryUpdateExistingMessage(session.id, cancelledAskMsg),
+        isTrue,
+      );
+      final afterFirstUpdate = await chatService.getMessages(session.id);
+      expect(afterFirstUpdate.single.parsedMeta?['isCancelled'], isTrue);
+
+      // 模拟对端通过会话清空截止线删除了旧澄清消息，但用更新的用户消息保持同一会话存活
+      final cutoffIso = LWWUtils.formatFixedUtcIso(
+        DateTime.now().toUtc().add(const Duration(minutes: 5)),
+      );
+      final survivingMsgIso = LWWUtils.formatFixedUtcIso(
+        DateTime.now().toUtc().add(const Duration(minutes: 10)),
+      );
+      await chatService.mergeChatSection(<String, dynamic>{
+        'format': 1,
+        'sessions': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': session.id,
+            'session_type': 'agent',
+            'title': session.title,
+            'created_at': '2026-11-20T09:00:00.000000Z',
+            'updated_at': '2026-11-20T09:00:00.000000Z',
+            'last_active_at': survivingMsgIso,
+            'is_pinned': 0,
+          },
+        ],
+        'messages': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'surviving_peer_msg_1',
+            'session_id': session.id,
+            'role': 'user',
+            'content': '对端清空后继续在同一会话发送的新消息',
+            'created_at': survivingMsgIso,
+            'updated_at': survivingMsgIso,
+          },
+        ],
+        'tombstones': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'entity_type': 'session_cutoff',
+            'entity_id': session.id,
+            'deleted_at': cutoffIso,
+          },
+        ],
+      });
+      expect(await chatService.sessionExists(session.id), isTrue);
+      expect(
+        (await chatService.getMessages(session.id)).map((m) => m.id).toList(),
+        <String>['surviving_peer_msg_1'],
+      );
+
+      // 此时退出页面若调用 tryUpdateExistingMessage，必须返回 false 且不把已被删掉的 ask_user 重新插回库中
+      expect(
+        await chatService.tryUpdateExistingMessage(session.id, cancelledAskMsg),
+        isFalse,
+      );
+      expect(
+        (await chatService.getMessages(session.id)).map((m) => m.id).toList(),
+        <String>['surviving_peer_msg_1'],
+      );
     });
   });
 }

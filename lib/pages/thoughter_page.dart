@@ -190,6 +190,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   String? _pendingAskUserSessionId;
   int? _pendingAskUserGeneration;
   app_chat.ChatMessage? _pendingAskUserMessage;
+  Future<String?>? _pendingAskUserInitialPersistFuture;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
   /// 流式文本 UI 的刷新间隔上限：一个窗口内最多落地一次。
@@ -431,7 +432,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   @visibleForTesting
   Future<void> debugStartNewChatForTest() => _startNewChat();
 
-  void _appendMessage(
+  Future<String?>? _appendMessage(
     app_chat.ChatMessage message, {
     bool persist = false,
     String? preferredSessionId,
@@ -440,6 +441,7 @@ class _ThoughterPageState extends State<ThoughterPage>
     _setState(() {
       _messages.add(message);
     });
+    Future<String?>? persistFuture;
     if (persist) {
       final effectiveGeneration = originGeneration ?? _sessionLoadGeneration;
       final sessionId = preferredSessionId ??
@@ -447,13 +449,12 @@ class _ThoughterPageState extends State<ThoughterPage>
               ? _currentSessionId
               : null);
       if (sessionId != null) {
-        unawaited(
-          _persistMessageSafely(
-            message,
-            preferredSessionId: sessionId,
-            originGeneration: effectiveGeneration,
-          ),
+        persistFuture = _persistMessageSafely(
+          message,
+          preferredSessionId: sessionId,
+          originGeneration: effectiveGeneration,
         );
+        unawaited(persistFuture);
       } else if (effectiveGeneration == _sessionLoadGeneration) {
         // 会话要到首条用户消息才建。挂起等 _ensureSessionCreated 补写，
         // 否则开场白这类先于会话出现的消息会被静默丢掉。
@@ -461,6 +462,7 @@ class _ThoughterPageState extends State<ThoughterPage>
       }
     }
     _scrollToBottom();
+    return persistFuture;
   }
 
   void _updateMessage(
@@ -639,6 +641,8 @@ class _ThoughterPageState extends State<ThoughterPage>
     final effectiveSessionId = targetSessionId ??
         (isTargetPending ? _pendingAskUserSessionId : null) ??
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
+    final initialPersistFuture =
+        isTargetPending ? _pendingAskUserInitialPersistFuture : null;
     if (effectiveSessionId != null && updated != null) {
       unawaited(
         _persistCancelledAskUserMessage(
@@ -646,6 +650,7 @@ class _ThoughterPageState extends State<ThoughterPage>
           sessionId: effectiveSessionId,
           originGeneration: effectiveGeneration,
           allowLiveRebuild: updateUi && mounted && !_isDisposed,
+          initialPersistFuture: initialPersistFuture,
         ),
       );
     }
@@ -662,6 +667,7 @@ class _ThoughterPageState extends State<ThoughterPage>
       _pendingAskUserSessionId = null;
       _pendingAskUserGeneration = null;
       _pendingAskUserMessage = null;
+      _pendingAskUserInitialPersistFuture = null;
     }
 
     // UI 更新：销毁路径或非挂载时安全跳过
