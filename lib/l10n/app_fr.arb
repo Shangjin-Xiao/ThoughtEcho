@@ -4957,5 +4957,7 @@
   "@smartPushBackgroundBatteryGuideDesc": {
     "description": "Subtitle for manual background battery settings guide in Play Store flavor"
   },
-  "aiUnsupportedAnthropicMessagesProtocol": "Le protocole natif Anthropic Messages (/v1/messages) n'est pas encore pris en charge. Utilisez une URL de base compatible OpenAI (/v1 ou /chat/completions) ou OpenRouter."
+  "aiUnsupportedAnthropicMessagesProtocol": "Le protocole natif Anthropic Messages (/v1/messages) n'est pas encore pris en charge. Utilisez une URL de base compatible OpenAI (/v1 ou /chat/completions) ou OpenRouter.",
+  "noteListLoadFailedHint": "Impossible de charger les notes pour le moment. Appuyez pour réessayer.",
+  "noteListLoadTimeoutHint": "Le chargement des notes prend plus de temps que prévu. Appuyez pour réessayer."
 }

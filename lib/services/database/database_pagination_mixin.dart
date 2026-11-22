@@ -1,11 +1,65 @@
 part of '../database_service.dart';
 
 /// Mixin providing pagination and stream operations for DatabaseService.
-mixin _DatabasePaginationMixin on _DatabaseServiceBase {
+mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
   /// 刷新回填单次查询的条数上限。超过这个量级会分多次查询，
   /// 既不把一次刷新拖成慢查询，也不会让列表停在更短的中间态
   /// （全部取回后才推送，见 [_refillAfterRefresh]）。
   static const int _maxRefillChunk = 500;
+
+  Future<List<Quote>> _queryQuotesPageSingleFlight({
+    required List<String>? tagIds,
+    required String? categoryId,
+    required int offset,
+    required int limit,
+    required String orderBy,
+    required String? searchQuery,
+    required List<String>? selectedWeathers,
+    required List<String>? selectedDayPeriods,
+    required bool includeDeleted,
+    required bool Function() isCancelled,
+  }) {
+    final signature = _buildQuoteQuerySignature(
+      tagIds: tagIds,
+      categoryId: categoryId,
+      offset: offset,
+      limit: limit,
+      orderBy: orderBy,
+      searchQuery: searchQuery,
+      selectedWeathers: selectedWeathers,
+      selectedDayPeriods: selectedDayPeriods,
+      excludeHiddenNotes: true,
+      dateStart: null,
+      dateEnd: null,
+      includeDeleted: includeDeleted,
+      enforceForegroundLifecycle: true,
+    );
+
+    return _coalesceInFlightQuoteQuery(
+      signature: signature,
+      isCancelled: isCancelled,
+      isPaginationFlight: true,
+      runFlight: (flight) => runZoned(
+        () => getUserQuotes(
+          tagIds: tagIds,
+          categoryId: categoryId,
+          offset: offset,
+          limit: limit,
+          orderBy: orderBy,
+          searchQuery: searchQuery,
+          selectedWeathers: selectedWeathers,
+          selectedDayPeriods: selectedDayPeriods,
+          includeDeleted: includeDeleted,
+        ),
+        zoneValues: <Object?, Object?>{
+          _paginationThrowingQueryZoneKey: _PaginationQueryZoneContext(
+            isCancelled: () => _isDisposed || flight.areAllWaitersCancelled,
+            enforceForegroundLifecycle: true,
+          ),
+        },
+      ),
+    );
+  }
 
   /// 判断刷新前后的可见列表是否逐条完全一致。
   ///
@@ -37,6 +91,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
   }) async {
     final generation = _quotesLoadGeneration;
     var failed = false;
+    Object? failureError;
+    StackTrace? failureStackTrace;
 
     while (_currentQuotes.length < targetCount &&
         _watchHasMore &&
@@ -44,20 +100,20 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         generation == _quotesLoadGeneration) {
       final before = _currentQuotes.length;
       try {
-        await loadMoreQuotes(
+        await _loadMoreQuotesInternal(
           refillCount: targetCount - before,
           suppressNotify: true,
+          logFailureAtBoundary: false,
         );
+      } on _QueryCancelledException {
+        if (generation == _quotesLoadGeneration) {
+          _coordinatorState.endRefill();
+        }
+        return;
       } catch (e, stackTrace) {
-        // 查询失败/超时。loadMoreQuotes 对超时会 rethrow，这里必须接住，
-        // 否则 unawaited 的回填会变成未处理的异步异常。
         failed = true;
-        logError(
-          '刷新回填失败: $e',
-          error: e,
-          stackTrace: stackTrace,
-          source: 'DatabaseService',
-        );
+        failureError = e;
+        failureStackTrace = stackTrace;
         break;
       }
       // 没有新增说明结果被去重光了，再循环就是死循环。
@@ -67,40 +123,80 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     // 期间又来了一次刷新：由那一次负责推送，这里直接退场。
     if (_isDisposed || generation != _quotesLoadGeneration) return;
 
-    // 回填因失败中断且没取够：**整体回滚到刷新前的状态**。
-    //
-    // 只"跳过推送"是不够的：那样 UI 还显示着 N 条，内存里的 _currentQuotes
-    // 却已被清空、_watchOffset 也归零了。接下来任何一次普通分页（空闲预取、
-    // 滚到底部的兜底加载）都会从 offset=0 取回第一页并正常推给 UI，
-    // 列表照样塌回第一页 —— 这个 PR 要修的塌陷又从后门绕了回来。
-    // 所以必须把列表、ID 集合和分页游标一起复原，让内存状态和 UI 重新一致。
-    //
-    // 注意只在失败时这么做：正常取完发现变短是真实的删除，必须如实推送。
-    // 这条保护依赖 loadMoreQuotes 在 suppressNotify 时把所有错误都抛出来，
-    // 否则被吞掉的错误会伪装成"取完了"，仍然推出截断列表。
-    if (failed && _currentQuotes.length < previousQuotes.length) {
-      logDebug(
-        '刷新回填未取满（${_currentQuotes.length}/${previousQuotes.length}），'
-        '回滚到刷新前的状态以免列表塌缩',
-      );
-      _currentQuotes = List<Quote>.from(previousQuotes);
-      _currentQuoteIds
-        ..clear()
-        ..addAll(previousQuotes.map((quote) => quote.id).whereType<String>());
-      _watchOffset = _currentQuotes.length;
-      // 连分页游标一起复原：刷新前如果已经翻到底（_watchHasMore == false），
-      // 无条件写 true 会让列表重新显示"还有下一页"，用户滑到底还会看到
-      // 一次注定取不到东西的转圈。
+    if (failed) {
+      final error = failureError!;
+      final stackTrace = failureStackTrace ?? StackTrace.current;
+      final suspendedInBackground =
+          error is TimeoutException && !_isAppLifecycleActive();
+      if (!suspendedInBackground) {
+        logErrorOnce(
+          '刷新回填失败: $error',
+          error: error,
+          stackTrace: stackTrace,
+          source: 'DatabaseService',
+        );
+      } else {
+        logDebug('后台生命周期下刷新回填已挂起: $error');
+        _coordinatorState.markDeferredRefresh(_quotesController);
+      }
+
+      if (previousQuotes.isNotEmpty ||
+          (suspendedInBackground &&
+              _coordinatorState.hasDeliveredForController(_quotesController))) {
+        logDebug(
+          '刷新回填未取满（${_currentQuotes.length}/${previousQuotes.length}），'
+          '回滚到刷新前的状态以免列表塌缩',
+        );
+        _currentQuotes = List<Quote>.from(previousQuotes);
+        _currentQuoteIds
+          ..clear()
+          ..addAll(
+            previousQuotes.map((quote) => quote.id).whereType<String>(),
+          );
+        _watchOffset = _currentQuotes.length;
+        _watchHasMore = previousHasMore;
+        _pendingRefillTarget =
+            suspendedInBackground && targetCount > _currentQuotes.length
+                ? targetCount
+                : 0;
+        _coordinatorState.endRefill();
+        return;
+      }
+
+      // 首屏尚未拿到任何数据时恢复/刷新失败：不推送伪装成“无笔记”的空列表，
+      // 复原分页标志并向流订阅方显式下发错误事件。
+      _currentQuotes = [];
+      _currentQuoteIds.clear();
+      _watchOffset = 0;
       _watchHasMore = previousHasMore;
-      // 状态已经复原，下一次刷新可以直接按 _currentQuotes.length 算目标。
-      _pendingRefillTarget = 0;
+      _pendingRefillTarget = suspendedInBackground ? targetCount : 0;
+      _coordinatorState.endRefill();
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.addError(error, stackTrace);
+      }
       return;
     }
 
-    _pendingRefillTarget = 0;
+    final bool hadDeliveredSnapshot =
+        _coordinatorState.hasDeliveredForController(_quotesController);
+    final bool lastEmittedHasMore = hadDeliveredSnapshot
+        ? _coordinatorState.lastDeliveredHasMore
+        : previousHasMore;
+    final bool skipStreamEmit =
+        _quoteListsEquivalent(previousQuotes, _currentQuotes) &&
+            _watchHasMore == previousHasMore &&
+            _watchHasMore == lastEmittedHasMore;
 
-    if (_quoteListsEquivalent(previousQuotes, _currentQuotes)) {
-      logDebug('刷新后可见列表无变化，跳过整表推送');
+    _pendingRefillTarget = 0;
+    _coordinatorState.markDelivered(
+      _quotesController,
+      quotes: _currentQuotes,
+      hasMore: _watchHasMore,
+      clearDeferredRefresh: true,
+    );
+
+    if (skipStreamEmit) {
+      logDebug('刷新后可见列表与分页状态均无变化，跳过整表推送');
       return;
     }
 
@@ -116,6 +212,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     if (_isDisposed) return;
 
     if (_quotesController != null && !_quotesController!.isClosed) {
+      _coordinatorState.markDelivered(
+        _quotesController,
+        quotes: _currentQuotes,
+        hasMore: _watchHasMore,
+      );
       // 直接发送当前列表的副本，已保证唯一性
       _quotesController!.add(List.from(_currentQuotes));
     }
@@ -137,22 +238,53 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       // 滚动位置被夹紧 —— 表现就是「列表突然飞走/弹回顶部 + 底部转圈 + 大片空白」。
       // 所以刷新必须一次把原有页数全部取回，列表长度保持不变。
       //
-      // 上一次刷新可能还在回填途中（那时 _currentQuotes 已被清空），
-      // 此时按当时的长度 0 算目标会退化成只取一页，等于把这个 bug 放回来。
-      // 沿用在途目标即可。
-      final int loadedCount = _currentQuotes.isNotEmpty
-          ? _currentQuotes.length
-          : _pendingRefillTarget;
-      // 列表本来就是空的（首屏前的刷新）：照旧取一页。
-      final int reloadCount = loadedCount > 0 ? loadedCount : _watchLimit;
+      // 上一次刷新可能还在分块回填途中（那时 _currentQuotes 要么已被清空，要么仅装有尚未投递的部分分块），
+      // 此时必须始终以本轮连续刷新开始前已投递的完整基线为准，绝不能拿未投递的半程分块覆盖回滚基线。
+      final bool hasCommittedSnapshot =
+          _coordinatorState.hasDeliveredForController(_quotesController);
+      final bool wasRefillInProgress = _coordinatorState.isRefillInProgress;
+      late final List<Quote> previousQuotes;
+      late final bool previousHasMore;
+      if (wasRefillInProgress) {
+        previousQuotes = List<Quote>.from(
+          _coordinatorState.refillBaselineQuotes,
+        );
+        previousHasMore = _coordinatorState.refillBaselineHasMore;
+      } else if (_currentQuotes.isNotEmpty) {
+        previousQuotes = List<Quote>.from(_currentQuotes);
+        previousHasMore = _watchHasMore;
+        _coordinatorState.beginRefill(
+          quotes: previousQuotes,
+          hasMore: previousHasMore,
+        );
+      } else if (hasCommittedSnapshot) {
+        previousQuotes = List<Quote>.from(
+          _coordinatorState.lastDeliveredQuotes,
+        );
+        previousHasMore = _coordinatorState.lastDeliveredHasMore;
+        _coordinatorState.beginRefill(
+          quotes: previousQuotes,
+          hasMore: previousHasMore,
+        );
+      } else {
+        previousQuotes = <Quote>[];
+        previousHasMore = _watchHasMore;
+        _coordinatorState.beginRefill(
+          quotes: const <Quote>[],
+          hasMore: previousHasMore,
+        );
+      }
+      int loadedCount = wasRefillInProgress ? 0 : _currentQuotes.length;
+      if (_pendingRefillTarget > loadedCount) {
+        loadedCount = _pendingRefillTarget;
+      }
+      if (previousQuotes.length > loadedCount) {
+        loadedCount = previousQuotes.length;
+      }
+      // 列表本来不足一页（如首屏前或总笔记数少于一页时新增/同步合入）：至少取满一页容量。
+      final int reloadCount =
+          loadedCount > _watchLimit ? loadedCount : _watchLimit;
       _pendingRefillTarget = reloadCount;
-      // 回填结果和刷新前一模一样时不再向 UI 推送：整表推送会让列表页
-      // 重建全部已加载 item（上百次 build + 首次布局），发生在滚动帧里
-      // 就是一次明显的卡顿。回收站过期清理、同步后的例行刷新等场景，
-      // 可见列表其实一条都没变。
-      final List<Quote> previousQuotes = List<Quote>.from(_currentQuotes);
-      // 回填失败要整体回滚时，分页游标也得跟着回到刷新前的样子。
-      final bool previousHasMore = _watchHasMore;
       logDebug('刷新笔记流数据，需回填 $reloadCount 条');
       // 优化：清除所有缓存，确保获取最新数据
       clearAllCacheForParts();
@@ -190,43 +322,43 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     List<String>? selectedDayPeriods, // 时间段筛选
     bool includeDeleted = false,
   }) {
-    // 修复：如果数据库未初始化，先返回空流并等待初始化
-    if (!_isInitialized) {
-      logDebug('数据库尚未初始化，返回空流并等待初始化...');
+    // 修复：如果数据库未初始化，先返回临时流并等待初始化完成再通知重订
+    if (!isInitialized) {
+      logDebug('数据库尚未初始化，等待初始化完成后通知重新订阅...');
 
-      // 创建一个临时的流控制器
       final tempController = StreamController<List<Quote>>.broadcast();
-      tempController.add([]); // 立即发送空列表
 
-      // 异步等待初始化完成后重新调用
       Future.microtask(() async {
         try {
           if (_isInitializing && _initCompleter != null) {
             await _initCompleter!.future;
-          } else if (!_isInitialized) {
+          } else if (!isInitialized) {
             await init();
           }
 
-          // 修复：初始化完成后，通知UI重新订阅
           logDebug('数据库初始化完成，通知UI重新订阅数据流');
-          tempController.close();
+          await tempController.close();
 
-          // 针对安卓平台的特殊处理
           if (!kIsWeb && Platform.isAndroid) {
-            // 安卓平台延迟更长时间通知，确保UI完全准备好
             Future.delayed(const Duration(milliseconds: 300), () {
-              notifyListeners();
+              if (!_isDisposed) notifyListeners();
             });
           } else {
-            // 其他平台立即通知
             SchedulerBinding.instance.addPostFrameCallback((_) {
               if (!_isDisposed) notifyListeners();
             });
           }
-        } catch (e) {
-          logError('等待数据库初始化失败: $e', error: e, source: 'watchQuotes');
-          tempController.addError(e);
-          await tempController.close(); // 修复：异常路径也关闭 controller
+        } catch (e, stackTrace) {
+          logErrorOnce(
+            '等待数据库初始化失败: $e',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'watchQuotes',
+          );
+          if (!tempController.isClosed) {
+            tempController.addError(e, stackTrace);
+            await tempController.close();
+          }
         }
       });
 
@@ -367,6 +499,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         _quotesController!.close();
       }
       _quotesController = StreamController<List<Quote>>.broadcast();
+      _coordinatorState.resetForNewWatchController();
 
       // 修复：在重置状态时确保原子性操作，避免竞态条件
       // 注意：_watchOffset 只能在这里（真正重建流、清空 _currentQuotes 时）归零。
@@ -381,46 +514,47 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _pendingRefillTarget = 0;
       _isLoading = false;
       _quotesLoadGeneration++;
+      final generation = _quotesLoadGeneration;
       _watchHasMore = true; // 重置分页状态
 
-      // 性能优化：仅在首次调用时同步发送空列表（UI 需要显示 loading/空状态）。
-      // 搜索/筛选变化时不发送空列表，让 UI 保留旧结果可见，
-      // 等异步加载完成后用新数据平滑替换，避免列表瞬间清空造成视觉闪烁。
-      if (isFirstCall) {
-        _quotesController!.add([]);
-      }
-
-      // 在新的异步上下文中执行初始化
+      // 在新的异步上下文中加载首屏/新筛选结果；不再预发空白占位列表，也不包裹跨层 10 秒超时。
       Future.microtask(() async {
+        if (_isDisposed || generation != _quotesLoadGeneration) return;
         try {
-          // 优化：移除重复的数据迁移检查，这些已在初始化阶段完成
-
-          // 加载第一页数据
-          await loadMoreQuotes(
+          await _loadMoreQuotesInternal(
             tagIds: tagIds,
             categoryId: categoryId,
             searchQuery: searchQuery,
             selectedWeathers: selectedWeathers,
             selectedDayPeriods: selectedDayPeriods,
             includeDeleted: includeDeleted,
+            suppressNotify: false,
+            logFailureAtBoundary: false,
           );
-        } catch (e) {
-          logError('数据初始化或加载失败: $e', error: e, source: 'DatabaseService');
-          // 即使失败也发送空列表，避免UI挂起
+        } on _QueryCancelledException {
+          return;
+        } catch (e, stackTrace) {
+          if (_isDisposed || generation != _quotesLoadGeneration) {
+            return;
+          }
+          final suspendedInBackground =
+              e is TimeoutException && !_isAppLifecycleActive();
+          if (!suspendedInBackground) {
+            logErrorOnce(
+              '数据初始化或加载失败: $e',
+              error: e,
+              stackTrace: stackTrace,
+              source: 'DatabaseService',
+            );
+          } else {
+            logDebug('后台生命周期下首屏/筛选查询已挂起: $e');
+            _coordinatorState.markDeferredRefresh(_quotesController);
+          }
           if (_quotesController != null && !_quotesController!.isClosed) {
-            _quotesController!.add([]);
+            _quotesController!.addError(e, stackTrace);
           }
         }
-      }).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          logError('数据加载超时（10秒）', source: 'DatabaseService');
-          // 超时时发送空列表，确保UI不会永远卡住
-          if (_quotesController != null && !_quotesController!.isClosed) {
-            _quotesController!.add([]);
-          }
-        },
-      );
+      });
     } else {
       // 修复：复用已有流时，新订阅者不会收到历史数据。
       // 通过 microtask 发送当前缓存数据，确保新订阅者能立即获取已有数据。
@@ -447,6 +581,30 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     bool? includeDeleted,
     int? refillCount,
     bool suppressNotify = false,
+  }) {
+    return _loadMoreQuotesInternal(
+      tagIds: tagIds,
+      categoryId: categoryId,
+      searchQuery: searchQuery,
+      selectedWeathers: selectedWeathers,
+      selectedDayPeriods: selectedDayPeriods,
+      includeDeleted: includeDeleted,
+      refillCount: refillCount,
+      suppressNotify: suppressNotify,
+      logFailureAtBoundary: !suppressNotify,
+    );
+  }
+
+  Future<void> _loadMoreQuotesInternal({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool? includeDeleted,
+    int? refillCount,
+    required bool suppressNotify,
+    required bool logFailureAtBoundary,
   }) async {
     // 使用当前观察的参数作为默认值
     tagIds ??= _watchTagIds;
@@ -464,11 +622,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
 
     _isLoading = true;
     final loadGeneration = _quotesLoadGeneration;
+    final controllerAtStart = _quotesController;
     final requestOffset = _watchOffset;
-    // 刷新回填：一次尽量多取，避免列表在用户滚动途中变短。
-    // 单次查询封顶，超出的部分由 _refillAfterRefresh 继续分块取。
-    // refillCount 一给就照它来（只受分块上限约束）：最后一块往往小于一页，
-    // 若这时退回 _watchLimit 就会多取一整页，回填出比刷新前更长的列表。
     final int requestLimit = refillCount == null
         ? _watchLimit
         : (refillCount > _maxRefillChunk ? _maxRefillChunk : refillCount);
@@ -476,8 +631,13 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=$requestOffset，limit=$requestLimit',
     );
 
+    bool isRequestCancelled() =>
+        _isDisposed ||
+        loadGeneration != _quotesLoadGeneration ||
+        (controllerAtStart != null && controllerAtStart.isClosed);
+
     try {
-      final quotes = await getUserQuotes(
+      final quotes = await _queryQuotesPageSingleFlight(
         tagIds: tagIds,
         categoryId: categoryId,
         offset: requestOffset,
@@ -487,12 +647,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         selectedWeathers: selectedWeathers,
         selectedDayPeriods: selectedDayPeriods,
         includeDeleted: includeDeleted,
-      ).timeout(
-        const Duration(seconds: 5), // 缩短超时时间
-        onTimeout: () {
-          logError('getUserQuotes 查询超时（5秒）', source: 'DatabaseService');
-          throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
-        },
+        isCancelled: isRequestCancelled,
       );
 
       if (loadGeneration != _quotesLoadGeneration) {
@@ -503,12 +658,9 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _watchOffset = requestOffset + quotes.length;
 
       if (quotes.isEmpty) {
-        // 没有更多数据了
         _watchHasMore = false;
         logDebug('没有更多笔记数据，设置_watchHasMore=false');
       } else {
-        // 性能优化：使用增量维护的 _currentQuoteIds 进行去重
-        // 避免每次都遍历 _currentQuotes 构建 Set
         final newQuotes = <Quote>[];
         for (final quote in quotes) {
           if (quote.id != null && !_currentQuoteIds.contains(quote.id)) {
@@ -526,42 +678,54 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
           logDebug('本次加载${quotes.length}条，但全部为重复数据，已过滤');
         }
 
-        // 简化：统一的_watchHasMore判断逻辑
         _watchHasMore = quotes.length >= requestLimit;
       }
 
-      // 通知状态变化
       notifyListeners();
 
-      // 回填分块进行时由 _refillAfterRefresh 在全部到位后统一推送：
-      // 中途推出去的短列表会把用户的滚动位置夹紧。
       if (suppressNotify) return;
 
-      // 修复：使用安全的方式通知订阅者
       _safeNotifyQuotesStream();
-    } catch (e) {
+    } on _QueryCancelledException catch (e) {
+      logDebug('忽略已取消的分页加载请求: $e');
+      if (!logFailureAtBoundary) {
+        rethrow;
+      }
+      return;
+    } catch (e, stackTrace) {
       if (loadGeneration != _quotesLoadGeneration) {
         logDebug('忽略过期笔记加载错误: $e');
         return;
       }
-      logError('加载更多笔记失败: $e', error: e, source: 'DatabaseService');
-      // 确保即使出错也通知UI，避免无限加载状态。
-      // 但分块回填期间不推：半成品比原列表更短，推出去就是一次列表塌缩，
-      // 失败后的最终状态由 _refillAfterRefresh 统一决定。
-      if (!suppressNotify) {
-        _safeNotifyQuotesStream();
+      if (logFailureAtBoundary) {
+        final suspendedInBackground =
+            e is TimeoutException && !_isAppLifecycleActive();
+        if (!suspendedInBackground) {
+          logErrorOnce(
+            '加载更多笔记失败: $e',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'DatabaseService',
+          );
+        }
       }
-
-      // 回填期间必须把**所有**错误交出去：_refillAfterRefresh 要靠异常判断
-      // 「保留旧列表」还是「如实推送」。只 rethrow 超时的话，SQLite 异常、
-      // 反序列化失败等会被这里吞掉、正常返回，回填便误以为成功，
-      // 截断后的列表照样推给 UI —— 列表塌缩的保护就形同虚设。
-      if (suppressNotify || e is TimeoutException) {
-        rethrow;
-      }
+      // 翻页失败保持现有已加载列表与游标不变，不向流重发伪成功列表，向上抛出供终端调用方处理。
+      rethrow;
     } finally {
       if (loadGeneration == _quotesLoadGeneration) {
-        _isLoading = false; // 确保当前加载状态总是被重置
+        _isLoading = false;
+        if (!suppressNotify &&
+            !_isDisposed &&
+            _isAppLifecycleActive() &&
+            _coordinatorState.consumeDeferredRefresh(_quotesController)) {
+          Future.microtask(() {
+            if (!_isDisposed &&
+                loadGeneration == _quotesLoadGeneration &&
+                _isAppLifecycleActive()) {
+              _refreshQuotesStream();
+            }
+          });
+        }
       }
     }
   }

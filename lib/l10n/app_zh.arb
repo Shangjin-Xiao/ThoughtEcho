@@ -5118,5 +5118,7 @@
       }
     }
   },
-  "aiUnsupportedAnthropicMessagesProtocol": "原生 Anthropic Messages (/v1/messages) 协议暂未接入运行链路，请改用 OpenAI 兼容基地址 (/v1 或 /chat/completions) 或 OpenRouter"
+  "aiUnsupportedAnthropicMessagesProtocol": "原生 Anthropic Messages (/v1/messages) 协议暂未接入运行链路，请改用 OpenAI 兼容基地址 (/v1 或 /chat/completions) 或 OpenRouter",
+  "noteListLoadFailedHint": "暂时无法读取笔记，请点击重试",
+  "noteListLoadTimeoutHint": "读取笔记响应较慢，请点击重试"
 }

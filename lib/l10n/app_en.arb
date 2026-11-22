@@ -5136,5 +5136,7 @@
       }
     }
   },
-  "aiUnsupportedAnthropicMessagesProtocol": "Native Anthropic Messages (/v1/messages) is not supported yet. Please use an OpenAI-compatible base URL (/v1 or /chat/completions) or OpenRouter instead."
+  "aiUnsupportedAnthropicMessagesProtocol": "Native Anthropic Messages (/v1/messages) is not supported yet. Please use an OpenAI-compatible base URL (/v1 or /chat/completions) or OpenRouter instead.",
+  "noteListLoadFailedHint": "Unable to load notes right now. Tap to retry.",
+  "noteListLoadTimeoutHint": "Loading notes is taking longer than expected. Tap to retry."
 }

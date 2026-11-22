@@ -139,6 +139,10 @@ void logDebug(String? message, {String? source}) {
   }
 }
 
+final Expando<bool> _loggedErrorInstances = Expando<bool>(
+  'loggedErrorInstances',
+);
+
 /// 错误日志函数
 void logError(
   String message, {
@@ -150,6 +154,36 @@ void logError(
     message,
     error: error,
     stackTrace: stackTrace,
+    source: source ?? 'Error',
+  );
+}
+
+/// 单次终端错误日志函数：对同一异常实例做幂等去重并兜底保留非空 [StackTrace]，
+/// 确保单次超时或数据库异常跨越流与组件边界时仅产生一条错误上报。
+void logErrorOnce(
+  String message, {
+  Object? error,
+  StackTrace? stackTrace,
+  String? source,
+}) {
+  if (error != null &&
+      error is! bool &&
+      error is! num &&
+      error is! String &&
+      error is! Record) {
+    try {
+      if (_loggedErrorInstances[error] == true) {
+        return;
+      }
+      _loggedErrorInstances[error] = true;
+    } on ArgumentError {
+      // 常量对象无法挂载 Expando 时退化为普通错误记录。
+    }
+  }
+  AppLogger.e(
+    message,
+    error: error,
+    stackTrace: stackTrace ?? StackTrace.current,
     source: source ?? 'Error',
   );
 }

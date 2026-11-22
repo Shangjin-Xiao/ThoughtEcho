@@ -4964,5 +4964,7 @@
   "@smartPushBackgroundBatteryGuideDesc": {
     "description": "Subtitle for manual background battery settings guide in Play Store flavor"
   },
-  "aiUnsupportedAnthropicMessagesProtocol": "기본 Anthropic Messages (/v1/messages) 프로토콜은 아직 지원되지 않습니다. OpenAI 호환 기본 URL (/v1 또는 /chat/completions) 또는 OpenRouter를 사용해 주세요."
+  "aiUnsupportedAnthropicMessagesProtocol": "기본 Anthropic Messages (/v1/messages) 프로토콜은 아직 지원되지 않습니다. OpenAI 호환 기본 URL (/v1 또는 /chat/completions) 또는 OpenRouter를 사용해 주세요.",
+  "noteListLoadFailedHint": "지금 노트를 불러올 수 없습니다. 탭하여 다시 시도해 주세요.",
+  "noteListLoadTimeoutHint": "노트를 불러오는 데 시간이 걸리고 있습니다. 탭하여 다시 시도해 주세요."
 }

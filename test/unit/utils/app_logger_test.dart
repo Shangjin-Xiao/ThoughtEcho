@@ -204,5 +204,31 @@ void main() {
       expect(fakeService.logRecords[0]['message'], 'true msg');
       expect(fakeService.logRecords[0]['source'], 'cond');
     });
+
+    test(
+      'logErrorOnce deduplicates identical error instances and guarantees non-null StackTrace',
+      () {
+        final sharedError = StateError('pagination timeout failure');
+        logErrorOnce('first boundary log', error: sharedError, source: 'DB');
+        logErrorOnce('second boundary log', error: sharedError, source: 'UI');
+
+        final errorLogs = fakeService.logRecords
+            .where((r) => r['level'] == UnifiedLogLevel.error)
+            .toList();
+        expect(errorLogs, hasLength(1));
+        expect(errorLogs.single['message'], 'first boundary log');
+        expect(errorLogs.single['stackTrace'], isNotNull);
+
+        // Distinct error instances and primitive values must still log cleanly.
+        logErrorOnce('distinct error log', error: StateError('another'));
+        logErrorOnce('primitive error log', error: 'plain-string-error');
+        expect(
+          fakeService.logRecords
+              .where((r) => r['level'] == UnifiedLogLevel.error)
+              .length,
+          3,
+        );
+      },
+    );
   });
 }

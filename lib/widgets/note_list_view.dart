@@ -29,6 +29,7 @@ import 'note_list/collapsed_media_thumbnail.dart';
 import '../widgets/quote_content_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
+import '../widgets/app_error_view.dart';
 import 'app_empty_animation.dart';
 import 'note_filter_sort_sheet.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -187,8 +188,12 @@ class NoteListViewState extends State<NoteListView>
   Completer<void>? _initialDataCompleter = Completer<void>();
 
   /// 安全超时：防止首次加载永久卡在加载动画
+  static const int maxInitialLoadAutoRecoveries = 2;
   Timer? _initialLoadSafetyTimer;
   int _initialLoadTimeoutRecoveries = 0;
+  bool _isLifecycleActive = true;
+  bool _initialLoadSuspendedByLifecycle = false;
+  String? _initialLoadErrorMessage;
 
   DatabaseService? _databaseService;
   bool _databaseServiceListenerAttached = false;
@@ -635,6 +640,9 @@ class NoteListViewState extends State<NoteListView>
     _isLoading = true; // 修复：保持为 true，避免闪现"无笔记"
     _isInitializing = true;
     _waitingForServices = true; // 初始等待服务初始化
+    final initialLifecycleState = WidgetsBinding.instance.lifecycleState;
+    _isLifecycleActive = initialLifecycleState == null ||
+        initialLifecycleState == AppLifecycleState.resumed;
 
     // 前台真缺内存时测量缓存会被整排清掉（见 main.dart 的 didHaveMemoryPressure），
     // 回前台得有人把空闲预热重新点着，否则缓存空着、游标满着，下一次滑动每张卡片
@@ -859,16 +867,13 @@ class NoteListViewState extends State<NoteListView>
       logDebug('外部标签已更新，清空本地缓存并刷新 UI', source: 'NoteListView');
     }
 
-    // 优化：只有在筛选条件真正改变时才更新订阅
+    // 优化：只有在筛选条件真正改变时才更新订阅。
+    // 解锁首屏未完成或首屏加载失败态下的筛选/搜索/排序切换，使条件变更能立即重建流订阅并恢复。
     final bool shouldUpdate = _shouldUpdateSubscription(oldWidget);
+    final bool canUpdateStream =
+        !_waitingForServices && (_databaseService?.isInitialized ?? false);
 
-    if (shouldUpdate && _initialDataLoaded) {
-      // 如果是首次加载期间（初始数据还未加载完成），避免重置滚动位置
-      if (!_initialDataLoaded) {
-        logDebug('跳过更新订阅：首次数据加载中', source: 'NoteListView');
-        return;
-      }
-
+    if (shouldUpdate && canUpdateStream) {
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
       final bool isOnlySortChange = oldWidget.searchQuery ==
               widget.searchQuery &&
@@ -905,26 +910,30 @@ class NoteListViewState extends State<NoteListView>
 
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
-        preserveScrollPosition: isOnlySortChange || isSearchChange,
+        preserveScrollPosition:
+            _initialDataLoaded && (isOnlySortChange || isSearchChange),
         isSearchUpdate: isSearchChange,
         resetScrollToTop: isFilterChange && !isSearchChange,
       );
     } else if (shouldUpdate) {
-      logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');
+      logDebug('跳过更新：数据库服务尚未完成初始化', source: 'NoteListView');
     }
   }
 
-  /// 优化：显示错误提示的统一方法
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: AppConstants.snackBarDurationNormal,
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: AppLocalizations.of(context).retry,
-          onPressed: () => _updateStreamSubscription(),
-        ),
+  /// 优化：显示错误提示的统一方法（统一走 AppSnackBar.error 令牌规范）
+  void _showErrorSnackBar(
+    String message, {
+    VoidCallback? onRetry,
+  }) {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    AppSnackBar.error(
+      context,
+      message,
+      action: SnackBarAction(
+        label: l10n.retry,
+        textColor: Theme.of(context).colorScheme.onErrorContainer,
+        onPressed: onRetry ?? _retryNoteListLoad,
       ),
     );
   }
@@ -934,7 +943,58 @@ class NoteListViewState extends State<NoteListView>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state != AppLifecycleState.resumed) return;
+    if (state != AppLifecycleState.resumed) {
+      _isLifecycleActive = false;
+      _initialLoadSafetyTimer?.cancel();
+      _initialLoadSafetyTimer = null;
+      if (!_initialDataLoaded) {
+        _initialLoadSuspendedByLifecycle = true;
+        logDebug(
+          '应用进入非活跃生命周期 ($state)，取消首屏安全超时并标记待恢复',
+          source: 'NoteListView',
+        );
+      }
+      return;
+    }
+
+    _isLifecycleActive = true;
+    final db = _databaseService;
+    if (!_initialDataLoaded && _initialLoadSuspendedByLifecycle) {
+      if (!_waitingForServices && db != null && db.isInitialized) {
+        _initialLoadSuspendedByLifecycle = false;
+        if (_initialLoadErrorMessage != null || !_isLoading) {
+          _updateState(() {
+            _initialLoadErrorMessage = null;
+            _isLoading = true;
+          });
+        }
+        if (_quotesSub == null) {
+          _initializeDataStream();
+        } else {
+          if (!DatabaseService.isPaginationQueryInFlight(db)) {
+            DatabaseService.consumeDeferredPaginationRefresh(db);
+            logDebug(
+              '应用回到前台 resumed 且首屏尚未就绪，触发单次干净恢复拉取',
+              source: 'NoteListView',
+            );
+            db.refreshQuotes();
+          }
+          _scheduleInitialLoadSafetyTimer();
+        }
+      }
+    } else if (_initialDataLoaded &&
+        !_waitingForServices &&
+        db != null &&
+        db.isInitialized &&
+        !DatabaseService.isPaginationQueryInFlight(db) &&
+        DatabaseService.consumeDeferredPaginationRefresh(db)) {
+      logDebug(
+        '应用回到前台 resumed，补跑后台挂起的列表刷新',
+        source: 'NoteListView',
+      );
+      db.refreshQuotes();
+    }
+
     // 后台例行 trim 现在只把 imageCache **淘汰**到一个小额度而不是清空
     // （见 [AppWidgetsBinding]），但额度之外的那些还是掉了；用户回来往回滑，
     // 越过那条线的照片照样会变灰重解一次。测量缓存这时是完整的，所以重走一遍预热
@@ -1058,9 +1118,10 @@ class NoteListViewState extends State<NoteListView>
 
   Future<void> resetAndLoad() async {
     _quotes.clear();
+    _initialLoadErrorMessage = null;
     _rebuildRowIndexByKey();
     _hasMore = true;
-    _loadMore();
+    await _loadMore();
   }
 
   /// 触发指定 ID 的笔记卡片入场/更新动画（保存/修改/撤销恢复后调用）。
@@ -1247,7 +1308,7 @@ class NoteListViewState extends State<NoteListView>
           }
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && _hasMore && !_isLoading) {
-              _loadMore();
+              unawaited(_loadMore(showErrorFeedback: false));
             }
           });
         }
@@ -1263,7 +1324,10 @@ class NoteListViewState extends State<NoteListView>
       if (_isLoading) {
         await Future.delayed(const Duration(milliseconds: 200));
       } else {
-        await _loadMore();
+        final loaded = await _loadMore(showErrorFeedback: false);
+        if (!loaded) {
+          return false;
+        }
       }
     }
 
