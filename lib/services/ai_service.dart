@@ -3,6 +3,7 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 import '../models/quote_model.dart';
 import '../models/chat_message.dart';
 import '../models/ai_provider_settings.dart';
+import '../models/ai_task.dart';
 import '../models/weather_data.dart' show WeatherCodeMapper;
 import '../services/agent_memory_service.dart';
 import '../services/settings_service.dart' show SettingsService;
@@ -30,10 +31,10 @@ typedef StreamingErrorCallback = void Function(dynamic error);
 // (e.g., summarization, translation, chat) into dedicated provider classes.
 class AIService extends ChangeNotifier {
   SettingsService _settingsService;
-  final APIKeyManager _apiKeyManager = APIKeyManager();
+  final APIKeyManager _apiKeyManager;
   final AIPromptManager _promptManager = AIPromptManager();
   final AIRequestHelper _requestHelper = AIRequestHelper();
-  final OpenAIStreamService _openAIStreamService = OpenAIStreamService();
+  final OpenAIStreamService _openAIStreamService;
 
   /// 用户画像来源。每日提示与周期洞察共用 Thoughter 的同一份记忆。
   AgentMemoryService? _memoryService;
@@ -46,8 +47,12 @@ class AIService extends ChangeNotifier {
   AIService({
     required SettingsService settingsService,
     AgentMemoryService? memoryService,
+    APIKeyManager? apiKeyManager,
+    OpenAIStreamService? openAIStreamService,
   })  : _settingsService = settingsService,
-        _memoryService = memoryService;
+        _memoryService = memoryService,
+        _apiKeyManager = apiKeyManager ?? APIKeyManager(),
+        _openAIStreamService = openAIStreamService ?? OpenAIStreamService();
 
   /// 原位更新依赖引用（SettingsService 与 AgentMemoryService）。
   ///
@@ -82,6 +87,10 @@ class AIService extends ChangeNotifier {
   /// 会话标题的输出上限（token）。理由同 [_dailyPromptMaxTokens]。
   static const int _sessionTitleMaxTokens = 512;
 
+  /// Dreaming 后台归纳遇到推理模型时的最低输出额度保护（防止思考 token 耗尽 700 导致 JSON 截断）。
+  @visibleForTesting
+  static const int dreamingReasoningMinMaxTokens = 4096;
+
   /// 笔记的天气和时间段在库里存的是 key（`partly_cloudy` / `morning`）。
   /// 那是给筛选和图标用的标识符，不是给人读的文案——原样写进提示词，模型只能
   /// 照抄英文 key 回来，用户看到的界面却是「多云」。交给模型前先按用户语言翻好。
@@ -101,46 +110,48 @@ class AIService extends ChangeNotifier {
     );
   }
 
-  Future<void> _validateSettings({bool testNetwork = false}) async {
+  Future<void> _validateSettings({
+    AITask? task,
+    bool testNetwork = false,
+  }) async {
     try {
       final multiSettings = _settingsService.multiAISettings;
+      final resolvedProvider = multiSettings.resolveProviderForTask(task);
 
       // 1. 检查是否选择了AI服务商
-      if (multiSettings.currentProvider == null) {
+      if (resolvedProvider == null) {
         throw Exception('请先选择AI服务商');
       }
 
-      final currentProvider = multiSettings.currentProvider!;
-
       // 2. 验证API URL
-      if (currentProvider.apiUrl.trim().isEmpty) {
+      if (resolvedProvider.apiUrl.trim().isEmpty) {
         throw Exception('请先配置 API URL');
       }
 
       final urlValid =
-          Uri.tryParse(currentProvider.apiUrl)?.isAbsolute ?? false;
+          Uri.tryParse(resolvedProvider.apiUrl)?.isAbsolute ?? false;
       if (!urlValid) {
         throw Exception('API URL格式无效，请输入完整的URL地址');
       }
 
       // 3. 验证模型名称
-      if (currentProvider.model.trim().isEmpty) {
+      if (resolvedProvider.model.trim().isEmpty) {
         throw Exception('AI模型名称不能为空');
       }
 
       // 4. 验证API密钥（统一检查）
       final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
-        currentProvider.id,
+        resolvedProvider.id,
       );
       if (!hasApiKey) {
-        throw Exception('请先为 ${currentProvider.name} 配置有效的API密钥');
+        throw Exception('请先为 ${resolvedProvider.name} 配置有效的API密钥');
       }
 
-      logDebug('验证设置成功 - Provider: ${currentProvider.name}');
+      logDebug('验证设置成功 - Provider: ${resolvedProvider.name}');
 
       // 5. 可选的网络连接测试
       if (testNetwork) {
-        final hasConnection = await _testConnection(currentProvider);
+        final hasConnection = await _testConnection(resolvedProvider);
         if (!hasConnection) {
           throw Exception('无法连接到AI服务，请检查网络连接和配置');
         }
@@ -176,21 +187,16 @@ class AIService extends ChangeNotifier {
 
   /// 同步检查API Key是否有效 (用于UI快速判断)
   /// 注意：这个方法只做基本检查，实际验证需要使用异步方法
-  bool hasValidApiKey() {
+  bool hasValidApiKey({AITask? task}) {
     try {
       final multiSettings = _settingsService.multiAISettings;
+      final resolvedProvider = multiSettings.resolveProviderForTask(task);
 
-      // 检查当前provider的API Key
-      if (multiSettings.currentProvider != null) {
-        final currentProvider = multiSettings.currentProvider!;
-
-        // 首先检查provider是否启用
-        if (!currentProvider.isEnabled) {
+      // 检查目标任务（或全局默认）生效 provider 的可用性
+      if (resolvedProvider != null) {
+        if (!resolvedProvider.isEnabled) {
           return false;
         }
-
-        // 基本检查：provider存在且启用
-        // 实际的API Key验证通过异步方法进行
         return true;
       }
 
@@ -205,22 +211,21 @@ class AIService extends ChangeNotifier {
     }
   }
 
-  /// 异步检查当前供应商的API Key是否有效（从安全存储验证）
-  Future<bool> hasValidApiKeyAsync() async {
+  /// 异步检查指定任务（或当前默认）供应商的API Key是否有效（从安全存储验证）
+  Future<bool> hasValidApiKeyAsync({AITask? task}) async {
     try {
       final multiSettings = _settingsService.multiAISettings;
+      final resolvedProvider = multiSettings.resolveProviderForTask(task);
 
-      if (multiSettings.currentProvider != null) {
-        final currentProvider = multiSettings.currentProvider!;
-
+      if (resolvedProvider != null) {
         // 检查provider是否启用
-        if (!currentProvider.isEnabled) {
+        if (!resolvedProvider.isEnabled) {
           return false;
         }
 
         // 从安全存储验证API密钥
         final hasValidKey = await _apiKeyManager.hasValidProviderApiKey(
-          currentProvider.id,
+          resolvedProvider.id,
         );
 
         return hasValidKey;
@@ -233,22 +238,24 @@ class AIService extends ChangeNotifier {
     }
   }
 
-  /// 获取带有API Key的当前provider副本
+  /// 获取带有API Key的指定任务（或当前默认）provider副本
   /// 这个方法确保返回的provider包含从加密存储读取的真实API Key
-  Future<AIProviderSettings> _getCurrentProviderWithApiKey() async {
+  Future<AIProviderSettings> _getCurrentProviderWithApiKey({
+    AITask? task,
+  }) async {
     final multiSettings = _settingsService.multiAISettings;
+    final resolvedProvider = multiSettings.resolveProviderForTask(task);
 
-    if (multiSettings.currentProvider == null) {
+    if (resolvedProvider == null) {
       throw Exception('请先选择AI服务商');
     }
 
-    final currentProvider = multiSettings.currentProvider!;
-
-    final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
-    logDebug('获取当前Provider - ${currentProvider.name}');
+    final apiKey = await _apiKeyManager.getProviderApiKey(resolvedProvider.id);
+    logDebug(
+        '获取Provider(${task?.name ?? "default"}) - ${resolvedProvider.name}');
 
     // 创建provider副本并注入API Key
-    final providerWithApiKey = currentProvider.copyWith(
+    final providerWithApiKey = resolvedProvider.copyWith(
       apiKey: apiKey, // 注入真实的API Key
     );
 
@@ -326,6 +333,7 @@ class AIService extends ChangeNotifier {
   Stream<String> _streamViaOpenAI({
     required String systemPrompt,
     required String userMessage,
+    AITask? task,
     List<ChatMessage>? history,
     double? temperature,
     int? maxTokens,
@@ -337,13 +345,13 @@ class AIService extends ChangeNotifier {
 
     () async {
       try {
-        if (!await hasValidApiKeyAsync()) {
+        if (!await hasValidApiKeyAsync(task: task)) {
           controller.addError(Exception('请先在设置中配置 API Key'));
           return;
         }
 
-        await _validateSettings();
-        var provider = await _getCurrentProviderWithApiKey();
+        await _validateSettings(task: task);
+        var provider = await _getCurrentProviderWithApiKey(task: task);
         if (enableThinking != null) {
           provider = provider.copyWith(enableThinking: enableThinking);
         }
@@ -388,21 +396,22 @@ class AIService extends ChangeNotifier {
   Future<String> _chatCompletionViaOpenAI({
     required String systemPrompt,
     required String userMessage,
+    AITask? task,
     AIProviderSettings? provider,
     double? temperature,
     int? maxTokens,
     bool? enableThinking,
   }) async {
-    if (!await hasValidApiKeyAsync()) {
+    if (!await hasValidApiKeyAsync(task: task)) {
       throw Exception('请先在设置中配置 API Key');
     }
 
-    await _validateSettings();
+    await _validateSettings(task: task);
     final resolvedProvider = provider != null
         ? provider.copyWith(
             apiKey: await _apiKeyManager.getProviderApiKey(provider.id),
           )
-        : await _getCurrentProviderWithApiKey();
+        : await _getCurrentProviderWithApiKey(task: task);
 
     final messages = <openai.ChatMessage>[
       openai.ChatMessage.system(systemPrompt),
@@ -431,11 +440,18 @@ class AIService extends ChangeNotifier {
     required String userMessage,
     int maxTokens = 700,
   }) {
+    final dreamingProvider = _settingsService.multiAISettings
+        .resolveProviderForTask(AITask.dreaming);
+    final effectiveMaxTokens = (dreamingProvider?.supportsThinking ?? false)
+        ? math.max(maxTokens, dreamingReasoningMinMaxTokens)
+        : maxTokens;
+
     return _chatCompletionViaOpenAI(
+      task: AITask.dreaming,
       systemPrompt: systemPrompt,
       userMessage: userMessage,
       temperature: 0.2,
-      maxTokens: maxTokens,
+      maxTokens: effectiveMaxTokens,
       enableThinking: false,
     );
   }
@@ -549,6 +565,7 @@ class AIService extends ChangeNotifier {
     );
 
     yield* _streamViaOpenAI(
+      task: AITask.periodicInsight,
       systemPrompt: prompt,
       userMessage: '$timeContext\n\n$user',
       profileBlock: profileBlock,
@@ -589,6 +606,7 @@ class AIService extends ChangeNotifier {
     final profileBlock = await _userProfileContext();
 
     yield* _streamViaOpenAI(
+      task: AITask.periodicInsight,
       systemPrompt: _promptManager.getEmptyPeriodInsightSystemPrompt(
         languageCode: languageCode,
       ),
@@ -701,7 +719,7 @@ class AIService extends ChangeNotifier {
     () async {
       try {
         // 异步检查API Key是否有效
-        if (!await hasValidApiKeyAsync()) {
+        if (!await hasValidApiKeyAsync(task: AITask.dailyInsight)) {
           logDebug('API Key无效，使用DailyPromptGenerator生成每日提示');
           AptabaseHelper.trackEvent('feature_used', {
             'action': 'daily_prompt_generate',
@@ -714,7 +732,7 @@ class AIService extends ChangeNotifier {
 
         // 验证AI设置是否已初始化
         try {
-          await _validateSettings();
+          await _validateSettings(task: AITask.dailyInsight);
         } catch (e) {
           logDebug('AI设置验证失败: $e，将使用默认提示');
           AptabaseHelper.trackEvent('feature_used', {
@@ -765,6 +783,7 @@ class AIService extends ChangeNotifier {
             'feature_used', {'action': 'daily_prompt_generate', 'is_ai': true});
 
         await for (final chunk in _streamViaOpenAI(
+          task: AITask.dailyInsight,
           systemPrompt: systemPromptWithContext,
           userMessage: userMessage,
           temperature: 1.0,
@@ -802,7 +821,7 @@ class AIService extends ChangeNotifier {
     String analysisStyle = 'professional',
   }) async {
     // 使用异步验证确保API Key有效性
-    if (!await hasValidApiKeyAsync()) {
+    if (!await hasValidApiKeyAsync(task: AITask.periodicInsight)) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -831,6 +850,7 @@ class AIService extends ChangeNotifier {
 
         final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
         return await _chatCompletionViaOpenAI(
+          task: AITask.periodicInsight,
           systemPrompt: systemPrompt,
           userMessage: userMessage,
           maxTokens: 2500,
@@ -899,6 +919,7 @@ class AIService extends ChangeNotifier {
     ].join('\n\n');
 
     return _streamViaOpenAI(
+      task: AITask.periodicInsight,
       systemPrompt: systemPrompt,
       userMessage: userMessage,
       maxTokens: 2500,
@@ -942,13 +963,14 @@ class AIService extends ChangeNotifier {
   // 生成年度报告HTML
   Future<String> generateAnnualReportHTML(String prompt) async {
     // 使用异步验证确保API Key有效性
-    if (!await hasValidApiKeyAsync()) {
+    if (!await hasValidApiKeyAsync(task: AITask.periodicInsight)) {
       throw Exception('请先在设置中配置 API Key');
     }
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
         String result = await _chatCompletionViaOpenAI(
+          task: AITask.periodicInsight,
           systemPrompt: AIPromptManager.annualReportPrompt,
           userMessage: _buildEnhancedAnnualReportPrompt(prompt),
           temperature: 0.3, // 使用较低的温度确保格式一致性
@@ -1332,7 +1354,7 @@ class AIService extends ChangeNotifier {
   // 向笔记提问
   Future<String> askQuestion(Quote quote, String question) async {
     // 使用异步验证确保API Key有效性
-    if (!await hasValidApiKeyAsync()) {
+    if (!await hasValidApiKeyAsync(task: AITask.agent)) {
       throw Exception('请先在设置中配置 API Key');
     }
 
@@ -1351,6 +1373,7 @@ class AIService extends ChangeNotifier {
           question,
         );
         return await _chatCompletionViaOpenAI(
+          task: AITask.agent,
           systemPrompt: AIPromptManager.noteQAAssistantPrompt,
           userMessage: userMessage,
           temperature: 0.5,
@@ -1397,6 +1420,7 @@ class AIService extends ChangeNotifier {
     );
 
     return _streamViaOpenAI(
+      task: AITask.agent,
       systemPrompt: AIPromptManager.noteQAAssistantPrompt,
       userMessage: userMessage,
       history: history,
@@ -1506,6 +1530,7 @@ class AIService extends ChangeNotifier {
     buffer.write(question);
 
     return _streamViaOpenAI(
+      task: AITask.agent,
       systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
       userMessage: buffer.toString(),
       history: history,
@@ -1552,6 +1577,7 @@ class AIService extends ChangeNotifier {
     buffer.write(question);
 
     return _streamViaOpenAI(
+      task: AITask.agent,
       systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
       userMessage: buffer.toString(),
       history: history,
@@ -1610,12 +1636,15 @@ class AIService extends ChangeNotifier {
   ///
   /// 迁移到 OpenAIStreamService：使用 _chatCompletionViaOpenAI
   /// 避免 405 错误（openai_dart 正确构造 URL）。
-  Future<String> generateSessionTitle(String firstUserMessage) async {
+  Future<String> generateSessionTitle(
+    String firstUserMessage, {
+    AITask task = AITask.agent,
+  }) async {
     try {
       if (firstUserMessage.isEmpty) return 'Chat';
 
       // 优先尝试用 AI 生成标题
-      if (await hasValidApiKeyAsync()) {
+      if (await hasValidApiKeyAsync(task: task)) {
         try {
           // 限制消息长度为100字以内
           final truncated = firstUserMessage.length > 100
@@ -1623,6 +1652,7 @@ class AIService extends ChangeNotifier {
               : firstUserMessage;
 
           final title = await _chatCompletionViaOpenAI(
+            task: task,
             systemPrompt:
                 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
             userMessage: truncated,

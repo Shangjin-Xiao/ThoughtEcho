@@ -3763,6 +3763,8 @@
   "smartPushPermissionWarningDesc": "部分許可權未授予，可能影響準時提醒。點選下方專案前往開啟。",
   "smartPushNotificationPermission": "通知許可權",
   "smartPushBatteryOptimization": "關閉電池最佳化",
+  "smartPushBackgroundBatteryGuideTitle": "背景電池設定",
+  "smartPushBackgroundBatteryGuideDesc": "若提醒出現延遲，可開啟系統應用資訊頁面，手動調整背景電池使用策略",
   "smartPushAutoStartPermission": "自啟動許可權",
   "smartPushAutoStartHint": "部分 Android 裝置需要開啟自啟動許可權以保證後臺準時推送",
   "smartPushAutoStartTitle": "自啟動設定指引",
@@ -4965,5 +4967,85 @@
   "mmkvDiagnosticRerunSuccess": "已重新執行遷移並重新整理校驗結果",
   "mmkvDiagnosticConsistencySummaryTitle": "儲存一致性比對總覽",
   "mmkvDiagnosticKeyCountBinarySp": "儲存源鍵總數 (Binary / SP)",
-  "mmkvDiagnosticSpCoverage": "SharedPreferences 遷移覆蓋率"
+  "mmkvDiagnosticSpCoverage": "SharedPreferences 遷移覆蓋率",
+  "aiTaskRoutingSectionTitle": "按任務分配模型",
+  "aiTaskRoutingSectionDesc": "未單獨指定的任務將自動跟隨上方「正在使用」的預設服務，互不搶佔。",
+  "aiTaskDailyInsightTitle": "每日心跡提示",
+  "aiTaskPeriodicInsightTitle": "週期洞察（週/月/年報）",
+  "aiTaskDreamingTitle": "記憶整理（Dreaming）",
+  "aiTaskAgentTitle": "Thoughter 對話與工具",
+  "aiTaskBadgeDailyInsight": "每日提示",
+  "aiTaskBadgePeriodicInsight": "週期洞察",
+  "aiTaskBadgeDreaming": "記憶整理",
+  "aiTaskBadgeAgent": "Thoughter",
+  "aiTaskDailyInsightHint": "高頻短句產生，適合回應快、低成本的輕量模型",
+  "aiTaskPeriodicInsightHint": "彙總近期筆記脈絡，適合表達流暢的均衡模型",
+  "aiTaskDreamingHint": "週期洞察落庫或閒置時獨立在背景提煉記憶，適合高推理能力模型",
+  "aiTaskAgentHint": "多輪對話與工具呼叫，建議支援工具呼叫與長上下文的模型",
+  "aiTaskFollowingDefault": "跟隨預設（{provider}）",
+  "@aiTaskFollowingDefault": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowingDefaultUnset": "跟隨預設（未配置）",
+  "aiTaskExplicitSummary": "{provider} · {model}",
+  "@aiTaskExplicitSummary": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskSelectSheetTitle": "為「{task}」選擇模型",
+  "@aiTaskSelectSheetTitle": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowDefaultOption": "跟隨預設服務",
+  "aiTaskFollowDefaultSubtitle": "目前預設：{provider}（{model}）",
+  "@aiTaskFollowDefaultSubtitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFollowDefaultUnsetSubtitle": "目前未設定預設服務",
+  "aiTaskSwitchedToDefault": "「{task}」已恢復跟隨預設服務",
+  "@aiTaskSwitchedToDefault": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskSwitchedToProvider": "「{task}」已指定為 {provider}",
+  "@aiTaskSwitchedToProvider": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      },
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "thoughterModelSwitcherTooltip": "切換 Thoughter 對話模型",
+  "thoughterModelUnconfigured": "未配置模型",
+  "thoughterModelSheetTitle": "切換 Thoughter 模型",
+  "thoughterModelSheetSubtitle": "僅調整 Thoughter 對話與工具使用的模型，不影響預設服務與其他任務",
+  "thoughterManageAiServices": "管理 AI 服務配置",
+  "aiUnsupportedAnthropicMessagesProtocol": "原生 Anthropic Messages (/v1/messages) 協定暫未接入執行鏈路，請改用 OpenAI 相容基位址 (/v1 或 /chat/completions) 或 OpenRouter"
 }

@@ -57,6 +57,10 @@ extension _ThoughterSession on _ThoughterPageState {
       _chatSessionService.removeListener(_onChatSessionServiceChanged);
       _chatSessionListenerAttached = false;
     }
+    if (_settingsListenerAttached) {
+      _settingsService.removeListener(_onSettingsServiceChanged);
+      _settingsListenerAttached = false;
+    }
     _streamSubscription?.cancel();
     _tagSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -160,6 +164,10 @@ extension _ThoughterSession on _ThoughterPageState {
         _chatSessionListenerAttached = true;
       }
       _settingsReady = true;
+      if (!_settingsListenerAttached) {
+        _settingsService.addListener(_onSettingsServiceChanged);
+        _settingsListenerAttached = true;
+      }
       // 两条一次性提示串行弹，别叠在一起：实验性说明讲的是「AI 会出错」，
       // 记忆说明讲的是「它会记住你」，同屏出现用户一条都读不进去。
       //
@@ -176,10 +184,11 @@ extension _ThoughterSession on _ThoughterPageState {
         _currentMode = restoredMode;
       }
 
-      // 按 provider 配置初始化：优先使用用户开关，其次自动推断
-      final currentProvider = _settingsService.multiAISettings.currentProvider;
-      _enableThinking = currentProvider?.enableThinking ??
-          (currentProvider?.supportsThinking ?? false);
+      // 按 Thoughter 专属任务路由配置初始化：优先使用用户开关，其次自动推断
+      final agentProvider =
+          _settingsService.multiAISettings.resolveProviderForTask(AITask.agent);
+      _enableThinking = agentProvider?.enableThinking ??
+          (agentProvider?.supportsThinking ?? false);
 
       if (widget.session != null) {
         await _loadSession(widget.session!.id);
@@ -223,6 +232,17 @@ extension _ThoughterSession on _ThoughterPageState {
     return _entryConfig.resolveRestoredMode(restored);
   }
 
+  void _onSettingsServiceChanged() {
+    if (!mounted || !_settingsReady || _isDisposed) return;
+    final agentProvider =
+        _settingsService.multiAISettings.resolveProviderForTask(AITask.agent);
+    final nextThinking = agentProvider?.enableThinking ??
+        (agentProvider?.supportsThinking ?? false);
+    _setState(() {
+      _enableThinking = nextThinking;
+    });
+  }
+
   Future<void> _setThinkingEnabled(bool enabled) async {
     _setState(() {
       _enableThinking = enabled;
@@ -232,14 +252,14 @@ extension _ThoughterSession on _ThoughterPageState {
     }
 
     final multiSettings = _settingsService.multiAISettings;
-    final currentProvider = multiSettings.currentProvider;
-    if (currentProvider == null) {
+    final agentProvider = multiSettings.resolveProviderForTask(AITask.agent);
+    if (agentProvider == null) {
       return;
     }
 
     final updatedProviders = multiSettings.providers
         .map(
-          (provider) => provider.id == currentProvider.id
+          (provider) => provider.id == agentProvider.id
               ? provider.copyWith(enableThinking: enabled)
               : provider,
         )
@@ -249,7 +269,6 @@ extension _ThoughterSession on _ThoughterPageState {
       await _settingsService.saveMultiAISettings(
         multiSettings.copyWith(
           providers: updatedProviders,
-          currentProviderId: currentProvider.id,
         ),
       );
     } catch (e) {
@@ -736,7 +755,9 @@ extension _ThoughterSession on _ThoughterPageState {
     String sessionId,
     String firstUserMessage,
   ) {
-    _aiService.generateSessionTitle(firstUserMessage).then((title) async {
+    _aiService
+        .generateSessionTitle(firstUserMessage, task: AITask.agent)
+        .then((title) async {
       if (title.isNotEmpty && title != 'Chat') {
         await _chatSessionService.updateSessionTitle(
           sessionId,

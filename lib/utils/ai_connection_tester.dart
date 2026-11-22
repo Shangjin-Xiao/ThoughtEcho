@@ -7,6 +7,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 
+import '../gen_l10n/app_localizations.dart';
 import '../models/ai_provider_settings.dart';
 import '../services/openai_stream_service.dart';
 
@@ -72,4 +73,12 @@ class AIConnectionTester {
 
   /// 测试请求的 token 上限。只要能回一句话就够，给推理模型留一点余量。
   static const int _testMaxTokens = 64;
+
+  /// 将连接测试异常转换为面向当前界面语言的提示文本。
+  static String formatError(Object error, AppLocalizations l10n) {
+    if (error is UnsupportedAIProtocolError) {
+      return l10n.aiUnsupportedAnthropicMessagesProtocol;
+    }
+    return error.toString();
+  }
 }

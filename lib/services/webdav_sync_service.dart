@@ -3117,7 +3117,7 @@ class WebDAVSyncService extends ChangeNotifier {
     final digestSink = _SingleDigestSink();
     final hashInput = sha256.startChunkedConversion(digestSink);
     var receivedBytes = 0;
-    final sub = body.stream.listen(null);
+    final sub = body.stream.listen(null, cancelOnError: true);
     final completer = Completer<bool?>();
     sub.onData((Uint8List chunk) {
       receivedBytes += chunk.length;

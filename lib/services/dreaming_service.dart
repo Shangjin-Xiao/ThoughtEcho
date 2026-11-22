@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 
 import '../models/agent_memory.dart';
+import '../models/ai_task.dart';
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
 import '../utils/untrusted_text.dart';
@@ -108,7 +109,7 @@ class DreamingService {
         systemPrompt: systemPrompt,
         userMessage: userMessage,
       ),
-      isAiAvailable: aiService.hasValidApiKeyAsync,
+      isAiAvailable: () => aiService.hasValidApiKeyAsync(task: AITask.dreaming),
       loadNotesBasis: databaseService.getActiveNotesBasis,
     );
   }

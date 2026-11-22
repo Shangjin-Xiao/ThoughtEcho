@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/note_editor_states.dart';
 import 'package:thoughtecho/models/quote_model.dart';
@@ -105,8 +106,9 @@ void main() {
       state.dispose();
     });
 
-    test('dirty state tracking and document versioning on edit is synchronous',
-        () {
+    test(
+        'dirty state tracking and document versioning on edit via document changes stream',
+        () async {
       final state = NoteEditorState(
         initialPlainText: 'test',
         initialDeltaContent: null,
@@ -117,10 +119,11 @@ void main() {
       expect(state.isDirty, isFalse);
       final initialVersion = state.documentVersion;
 
-      // Edit happens synchronously
+      // Edit happens and is processed via document.changes stream
       state.controller.replaceText(0, 0, 'new content ', null);
+      await Future<void>.delayed(Duration.zero);
 
-      // Must be dirty immediately with no async microtask/delay
+      // Must be dirty after document changes stream emits
       expect(state.isDirty, isTrue);
       expect(state.documentVersion, greaterThan(initialVersion));
 
@@ -619,6 +622,61 @@ void main() {
       state.dispose();
     });
 
+    test(
+        'continuous selection movement under long document does not trigger Delta serialization',
+        () async {
+      final longText =
+          'A long line of test text for quill editor performance. ' * 200;
+      final spyDoc = _SpyQuillDocument()..insert(0, '$longText\n');
+      final state = NoteEditorState(
+        initialPlainText: longText,
+        initialDeltaContent: null,
+        draftStorageKey: 'test_selection_perf_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: spyDoc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+      final countAfterSetup = spyDoc.toDeltaCallCount;
+
+      // Continuous selection movements while clean must not trigger toDelta()
+      for (var offset = 0; offset <= 300; offset += 15) {
+        state.controller.updateSelection(
+          TextSelection.collapsed(offset: offset),
+          quill.ChangeSource.local,
+        );
+      }
+      await Future<void>.delayed(Duration.zero);
+      expect(spyDoc.toDeltaCallCount, countAfterSetup);
+      expect(state.isDirty, isFalse);
+
+      // Typing triggers a document change event
+      state.controller.replaceText(0, 0, 'NewPrefix ', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      final countAfterEdit = spyDoc.toDeltaCallCount;
+
+      // Continuous selection movements while dirty must also not trigger toDelta()
+      for (var offset = 0; offset <= 300; offset += 15) {
+        state.controller.updateSelection(
+          TextSelection.collapsed(offset: offset),
+          quill.ChangeSource.local,
+        );
+      }
+      await Future<void>.delayed(Duration.zero);
+      expect(spyDoc.toDeltaCallCount, countAfterEdit);
+      expect(state.isDirty, isTrue);
+
+      state.dispose();
+    });
+
     test('equal-length character replacement correctly marks state as dirty',
         () async {
       final doc = quill.Document()..insert(0, 'abc\n');
@@ -644,6 +702,99 @@ void main() {
 
       expect(state.isDirty, isTrue);
 
+      state.dispose();
+    });
+
+    test(
+        'restoring text back to saved baseline in the same synchronous turn leaves state clean',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_restore_sync_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      // Modify and immediately restore within the same synchronous turn
+      state.controller.replaceText(0, 1, 'z', null);
+      state.controller.replaceText(0, 1, 'a', null);
+
+      // Drain queued stream change events
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isFalse);
+      expect(state.controller.document.toPlainText(), 'abc\n');
+      state.dispose();
+    });
+
+    test(
+        'restoring text back to saved baseline across separate turns restores clean state',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_restore_async_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      state.controller.replaceText(0, 1, 'z', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      state.controller.replaceText(0, 1, 'a', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'calling markClean synchronously right after text edit does not get overridden by stream event',
+        () async {
+      final doc = quill.Document()..insert(0, 'abc');
+      final state = NoteEditorState(
+        initialPlainText: 'abc',
+        initialDeltaContent: null,
+        draftStorageKey: 'test_mark_clean_sync_key',
+        restoredFromDraft: false,
+      );
+      state.replaceController(
+        quill.QuillController(
+          document: doc,
+          selection: const TextSelection.collapsed(offset: 0),
+        ),
+        markCleanIfUnchanged: true,
+      );
+
+      expect(state.isDirty, isFalse);
+
+      state.controller.replaceText(0, 1, 'z', null);
+      state.markClean();
+
+      // Drain stream events
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isFalse);
       state.dispose();
     });
 
@@ -1002,7 +1153,190 @@ void main() {
 
       state.finishSave();
       expect(state.isSaving, isFalse);
+      expect(state.isPersisting, isFalse);
       expect(state.saveProgress, 1.0);
     });
+
+    test(
+        'markSavedSuccessfully clears submitted media while tracking subsequent imports separately',
+        () {
+      final state = NoteEditorMediaState();
+      state.recordImportedMedia('/tmp/first.png');
+      final submitted = state.sessionImportedMedia.toSet();
+      state.recordImportedMedia('/tmp/in_flight.png');
+
+      state.markSavedSuccessfully(submitted);
+
+      expect(state.didSaveSuccessfully, isTrue);
+      expect(state.unsavedImportedMedia, equals({'/tmp/in_flight.png'}));
+
+      state.recordImportedMedia('/tmp/post_save.png');
+      expect(
+        state.unsavedImportedMedia,
+        equals({'/tmp/in_flight.png', '/tmp/post_save.png'}),
+      );
+    });
   });
+
+  group('NoteEditorState.markNotePersisted and Metadata Snapshot Tokens', () {
+    test(
+        'markNotePersisted clears dirty flag and updates draftStorageKey and initialPlainText when unchanged',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: true,
+      );
+
+      state.controller.replaceText(0, 0, 'Saved body', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      final snapshot = state.captureDocumentSnapshot();
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-1');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(state.isDirty, isFalse);
+      expect(state.restoredFromDraft, isFalse);
+      expect(state.draftStorageKey, 'persisted-id-1');
+      expect(state.initialPlainText, 'Saved body');
+
+      state.dispose();
+    });
+
+    test(
+        'markNotePersisted keeps isDirty true when document changed after snapshot was captured',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: false,
+      );
+
+      state.controller.replaceText(0, 0, 'Committed', null);
+      await Future<void>.delayed(Duration.zero);
+      final snapshot = state.captureDocumentSnapshot();
+
+      // User types while persistence is in flight (even before stream drains)
+      state.controller.replaceText(9, 0, ' extra', null);
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-2');
+
+      expect(state.isDirty, isTrue);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+      expect(state.draftStorageKey, 'persisted-id-2');
+      expect(state.initialPlainText, 'Committed');
+
+      // Deleting the in-flight tail back to the persisted baseline marks it clean
+      state.controller.replaceText(9, 6, '', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test(
+        'markNotePersisted compares Delta and keeps isDirty true on same-length edit before stream drains',
+        () async {
+      final state = NoteEditorState(
+        initialPlainText: '',
+        initialDeltaContent: null,
+        draftStorageKey: 'new_note_temp',
+        restoredFromDraft: false,
+      );
+
+      state.controller.replaceText(0, 0, 'Committed', null);
+      await Future<void>.delayed(Duration.zero);
+      final snapshot = state.captureDocumentSnapshot();
+
+      // Same-length replacement keeps document.length equal to _savedDocumentLength,
+      // exercising the Delta comparison inside markNotePersisted before stream drains
+      state.controller.replaceText(0, 1, 'K', null);
+      state.markNotePersisted(snapshot, savedNoteId: 'persisted-id-3');
+
+      expect(state.isDirty, isTrue);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isTrue);
+
+      // Restoring the original character brings Delta back to the persisted baseline
+      state.controller.replaceText(0, 1, 'C', null);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.isDirty, isFalse);
+
+      state.dispose();
+    });
+
+    test('metadata snapshot token commits only the persisted baseline', () {
+      final metadata = NoteEditorMetadataState();
+      metadata.setAuthor('Author A');
+      final token = metadata.captureSnapshotToken();
+
+      // Metadata changes while save is in flight
+      metadata.setAuthor('Author B');
+      metadata.commitSnapshotToken(token);
+
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.setAuthor('Author A');
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      metadata.dispose();
+    });
+
+    test(
+        'toggling showLocation or showWeather after committing snapshot marks metadata dirty',
+        () {
+      final metadata = NoteEditorMetadataState()
+        ..updateLocation(
+          location: '示例省·示例市',
+          latitude: 30.0,
+          longitude: 120.0,
+          poiName: '示例区域',
+          show: true,
+        )
+        ..updateWeather(
+          weather: 'clear',
+          temperature: '22°C',
+          show: true,
+        );
+
+      final persistedWithLocationWeather = metadata.captureSnapshotToken();
+      metadata.commitSnapshotToken(persistedWithLocationWeather);
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Turning off location while raw location stays cached marks metadata dirty
+      metadata.showLocation = false;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.showLocation = true;
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Turning off weather while raw weather stays cached marks metadata dirty
+      metadata.showWeather = false;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      // Persisting with weather hidden makes hidden weather the new clean baseline
+      final persistedWithoutWeather = metadata.captureSnapshotToken();
+      metadata.commitSnapshotToken(persistedWithoutWeather);
+      expect(metadata.hasChanges(isExistingNote: true), isFalse);
+
+      // Re-enabling cached weather marks metadata dirty again
+      metadata.showWeather = true;
+      expect(metadata.hasChanges(isExistingNote: true), isTrue);
+
+      metadata.dispose();
+    });
+  });
+}
+
+class _SpyQuillDocument extends quill.Document {
+  int toDeltaCallCount = 0;
+
+  @override
+  Delta toDelta() {
+    toDeltaCallCount++;
+    return super.toDelta();
+  }
 }

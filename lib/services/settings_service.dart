@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/release_highlights.dart';
 import '../models/ai_settings.dart';
+import '../models/ai_task.dart';
 import '../models/anniversary_participation.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
@@ -668,11 +669,26 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _notifyDailyQuoteSourceChanged() async {
+    try {
+      await _mmkv.remove('smart_push_last_daily_quote');
+      await _mmkv.remove('smart_push_last_daily_quote_date');
+    } catch (_) {}
+    final pushInstance = SmartPushService.currentInstance;
+    if (pushInstance != null) {
+      unawaited(pushInstance.handleDailyQuoteSourceSettingsChanged());
+    }
+  }
+
   // 是否仅使用本地笔记作为一言
   bool get useLocalQuotesOnly => _appSettings.useLocalQuotesOnly;
   Future<void> setUseLocalQuotesOnly(bool enabled) async {
+    final changed = _appSettings.useLocalQuotesOnly != enabled;
     _appSettings = _appSettings.copyWith(useLocalQuotesOnly: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'toggle_setting',
       'setting': 'local_quotes_only',
@@ -684,8 +700,12 @@ class SettingsService extends ChangeNotifier {
   // 每日一言 provider
   String get dailyQuoteProvider => _appSettings.dailyQuoteProvider;
   Future<void> setDailyQuoteProvider(String provider) async {
+    final changed = _appSettings.dailyQuoteProvider != provider;
     _appSettings = _appSettings.copyWith(dailyQuoteProvider: provider);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     // provider 来自预设下拉选项（固定枚举），不是用户自由输入，可上报。
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'select_setting',
@@ -698,8 +718,15 @@ class SettingsService extends ChangeNotifier {
   // API Ninjas 分类选择
   List<String> get apiNinjasCategories => _appSettings.apiNinjasCategories;
   Future<void> setApiNinjasCategories(List<String> categories) async {
+    final prevSorted = List<String>.from(_appSettings.apiNinjasCategories)
+      ..sort();
+    final nextSorted = List<String>.from(categories)..sort();
+    final changed = prevSorted.join(',') != nextSorted.join(',');
     _appSettings = _appSettings.copyWith(apiNinjasCategories: categories);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     notifyListeners();
   }
 
@@ -719,8 +746,12 @@ class SettingsService extends ChangeNotifier {
   // 无网/离线时的一言回退数据源
   String get offlineQuoteSource => _appSettings.offlineQuoteSource;
   Future<void> setOfflineQuoteSource(String source) async {
+    final changed = _appSettings.offlineQuoteSource != source;
     _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     // 取值来自卡片内固定单选项（tagOnly/allNotes），不是用户自由输入。
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'select_setting',
@@ -818,12 +849,16 @@ class SettingsService extends ChangeNotifier {
 
   /// 设置语言代码，null 表示跟随系统
   Future<void> setLocale(String? localeCode) async {
+    final prevLocale = _appSettings.localeCode;
     if (localeCode == null) {
       _appSettings = _appSettings.copyWith(clearLocale: true);
     } else {
       _appSettings = _appSettings.copyWith(localeCode: localeCode);
     }
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (prevLocale != _appSettings.localeCode) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     // 语言代码来自应用支持的固定列表（null 记为 system），不是自由输入。
     AptabaseHelper.trackEvent('feature_used', {
       'action': 'select_setting',
@@ -1407,14 +1442,32 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> updateAppSettings(AppSettings settings) async {
+    final prevCategories = List<String>.from(_appSettings.apiNinjasCategories)
+      ..sort();
+    final nextCategories = List<String>.from(settings.apiNinjasCategories)
+      ..sort();
+    final quoteSourceChanged =
+        _appSettings.useLocalQuotesOnly != settings.useLocalQuotesOnly ||
+            _appSettings.offlineQuoteSource != settings.offlineQuoteSource ||
+            _appSettings.dailyQuoteProvider != settings.dailyQuoteProvider ||
+            _appSettings.hitokotoType != settings.hitokotoType ||
+            prevCategories.join(',') != nextCategories.join(',') ||
+            _appSettings.localeCode != settings.localeCode;
     _appSettings = settings;
     await _mmkv.setString(_appSettingsKey, json.encode(settings.toJson()));
+    if (quoteSourceChanged) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     notifyListeners();
   }
 
   Future<void> updateHitokotoType(String type) async {
+    final changed = _appSettings.hitokotoType != type;
     _appSettings = _appSettings.copyWith(hitokotoType: type);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (changed) {
+      await _notifyDailyQuoteSourceChanged();
+    }
     notifyListeners();
   }
 
@@ -1776,10 +1829,81 @@ class SettingsService extends ChangeNotifier {
       'use_custom_color': _mmkv.getBool('use_custom_color'),
       'use_dynamic_color': _mmkv.getBool('use_dynamic_color'),
     };
+    final deliveryHistoryRaw =
+        _mmkv.getString('smart_push_delivery_history_v1');
+    Map<String, dynamic>? parsedDeliveryHistory;
+    if (deliveryHistoryRaw != null && deliveryHistoryRaw.isNotEmpty) {
+      try {
+        final decodedHistory = json.decode(deliveryHistoryRaw);
+        if (decodedHistory is Map) {
+          parsedDeliveryHistory = Map<String, dynamic>.from(decodedHistory);
+          backup['smart_push_delivery_history_v1'] = parsedDeliveryHistory;
+        } else {
+          backup['smart_push_delivery_history_v1'] = deliveryHistoryRaw;
+        }
+      } catch (_) {
+        backup['smart_push_delivery_history_v1'] = deliveryHistoryRaw;
+      }
+    }
+
     final smartPushRaw = _mmkv.getString('smart_push_settings_v2');
     if (smartPushRaw != null && smartPushRaw.isNotEmpty) {
       try {
-        backup['smart_push_settings_v2'] = json.decode(smartPushRaw);
+        final decodedPush = json.decode(smartPushRaw);
+        if (decodedPush is Map) {
+          final mergedPush = Map<String, dynamic>.from(decodedPush);
+          if (parsedDeliveryHistory != null) {
+            final baseTimeRaw = mergedPush['lastPushTime'];
+            final histTimeRaw = parsedDeliveryHistory['lastPushTime'];
+            final baseTime =
+                baseTimeRaw is String ? DateTime.tryParse(baseTimeRaw) : null;
+            final histTime =
+                histTimeRaw is String ? DateTime.tryParse(histTimeRaw) : null;
+            final historyIsNewer = histTime != null &&
+                (baseTime == null || histTime.isAfter(baseTime));
+            if (historyIsNewer) {
+              mergedPush['lastPushTime'] = histTimeRaw;
+            }
+            final baseIds = mergedPush['recentlyPushedNoteIds'] is List
+                ? (mergedPush['recentlyPushedNoteIds'] as List)
+                    .map((e) => e.toString())
+                    .where((id) => id.isNotEmpty)
+                    .toList()
+                : const <String>[];
+            final histIds =
+                parsedDeliveryHistory['recentlyPushedNoteIds'] is List
+                    ? (parsedDeliveryHistory['recentlyPushedNoteIds'] as List)
+                        .map((e) => e.toString())
+                        .where((id) => id.isNotEmpty)
+                        .toList()
+                    : const <String>[];
+            if (baseIds.isNotEmpty || histIds.isNotEmpty) {
+              final mergedIds = <String>[];
+              void appendUnique(Iterable<String> ids) {
+                for (final id in ids) {
+                  if (id.isEmpty) continue;
+                  mergedIds.remove(id);
+                  mergedIds.add(id);
+                }
+              }
+
+              if (historyIsNewer) {
+                appendUnique(baseIds);
+                appendUnique(histIds);
+              } else {
+                appendUnique(histIds);
+                appendUnique(baseIds);
+              }
+              while (mergedIds.length > 50) {
+                mergedIds.removeAt(0);
+              }
+              mergedPush['recentlyPushedNoteIds'] = mergedIds;
+            }
+          }
+          backup['smart_push_settings_v2'] = mergedPush;
+        } else {
+          backup['smart_push_settings_v2'] = decodedPush;
+        }
       } catch (_) {
         backup['smart_push_settings_v2'] = smartPushRaw;
       }
@@ -1830,6 +1954,7 @@ class SettingsService extends ChangeNotifier {
 
         final rawProviders = multiAiSettingsJson['providers'] ??
             multiAiSettingsJson['availableProviders'];
+        final restoredProviderIdSet = <String>{};
         if (rawProviders is List) {
           final normalizedProviders = <Map<String, dynamic>>[];
           for (final item in rawProviders) {
@@ -1841,6 +1966,7 @@ class SettingsService extends ChangeNotifier {
               }
               final normalizedId = id.trim();
               itemMap['id'] = normalizedId;
+              restoredProviderIdSet.add(normalizedId);
 
               // 解析 provider 的 apiKey：
               // 若 itemMap["apiKey"] 存在但非 String，必须尝试回退到 itemMap["api_key"]；
@@ -1878,6 +2004,30 @@ class SettingsService extends ChangeNotifier {
             multiAiSettingsJson['availableProviders'] = normalizedProviders;
           }
         }
+
+        // 同步清洗校验 taskProviderIds：仅保留合法任务键名，且目标 providerId 为非空字符串并存在于恢复后的 providers 列表中
+        final rawTaskProviderIds = multiAiSettingsJson['taskProviderIds'];
+        if (rawTaskProviderIds is Map) {
+          final sanitizedTaskIds = <String, String>{};
+          for (final entry in rawTaskProviderIds.entries) {
+            final rawKey = entry.key;
+            final rawValue = entry.value;
+            if (rawKey is! String || rawValue is! String) {
+              continue;
+            }
+            final task = AITask.tryParse(rawKey);
+            final normalizedProviderId = rawValue.trim();
+            if (task != null &&
+                normalizedProviderId.isNotEmpty &&
+                restoredProviderIdSet.contains(normalizedProviderId)) {
+              sanitizedTaskIds[task.storageKey] = normalizedProviderId;
+            }
+          }
+          multiAiSettingsJson['taskProviderIds'] = sanitizedTaskIds;
+        } else {
+          multiAiSettingsJson.remove('taskProviderIds');
+        }
+
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
 
         // A backup controls provider IDs and URLs, but does not authorize sending
@@ -2025,24 +2175,69 @@ class SettingsService extends ChangeNotifier {
         }
       }
 
-      // 恢复智能推送设置
-      if (backupData.containsKey('smart_push_settings_v2')) {
-        final rawSmartPush = backupData['smart_push_settings_v2'];
-        if (rawSmartPush is Map) {
-          await _mmkv.setString(
-            'smart_push_settings_v2',
-            json.encode(rawSmartPush),
-          );
-        } else if (rawSmartPush is String && rawSmartPush.trim().isNotEmpty) {
+      // 恢复智能推送设置与独立投递历史
+      Map<String, dynamic>? decodeJsonObject(Object? rawValue) {
+        if (rawValue is Map) {
+          return Map<String, dynamic>.from(rawValue);
+        }
+        if (rawValue is String && rawValue.trim().isNotEmpty) {
           try {
-            final decoded = json.decode(rawSmartPush);
+            final decoded = json.decode(rawValue);
             if (decoded is Map) {
-              await _mmkv.setString(
-                'smart_push_settings_v2',
-                json.encode(decoded),
-              );
+              return Map<String, dynamic>.from(decoded);
             }
           } catch (_) {}
+        }
+        return null;
+      }
+
+      Map<String, dynamic>? restoredSmartPushMap;
+      if (backupData.containsKey('smart_push_settings_v2')) {
+        restoredSmartPushMap =
+            decodeJsonObject(backupData['smart_push_settings_v2']);
+        if (restoredSmartPushMap != null) {
+          await _mmkv.setString(
+            'smart_push_settings_v2',
+            json.encode(restoredSmartPushMap),
+          );
+        }
+      }
+
+      if (backupData.containsKey('smart_push_delivery_history_v1')) {
+        final rawHistory = backupData['smart_push_delivery_history_v1'];
+        if (rawHistory == null) {
+          await _mmkv.remove('smart_push_delivery_history_v1');
+        } else {
+          final historyMap = decodeJsonObject(rawHistory);
+          if (historyMap != null) {
+            await _mmkv.setString(
+              'smart_push_delivery_history_v1',
+              json.encode(historyMap),
+            );
+          }
+        }
+      } else if (restoredSmartPushMap != null) {
+        final rawTime = restoredSmartPushMap['lastPushTime'];
+        final validTime =
+            rawTime is String && DateTime.tryParse(rawTime) != null
+                ? rawTime
+                : null;
+        final validIds = restoredSmartPushMap['recentlyPushedNoteIds'] is List
+            ? (restoredSmartPushMap['recentlyPushedNoteIds'] as List)
+                .map((e) => e.toString())
+                .where((id) => id.isNotEmpty)
+                .toList()
+            : const <String>[];
+        if (validTime == null && validIds.isEmpty) {
+          await _mmkv.remove('smart_push_delivery_history_v1');
+        } else {
+          await _mmkv.setString(
+            'smart_push_delivery_history_v1',
+            json.encode(<String, dynamic>{
+              'lastPushTime': validTime,
+              'recentlyPushedNoteIds': validIds,
+            }),
+          );
         }
       }
 

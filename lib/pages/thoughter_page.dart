@@ -9,7 +9,10 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
+import '../constants/ai_provider_presets.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../models/ai_task.dart';
+import '../models/multi_ai_settings.dart';
 import '../models/thoughter_entry.dart';
 import '../models/ai_insight_workflow_options.dart';
 import '../models/chat_message.dart' as app_chat;
@@ -37,12 +40,14 @@ import '../models/note_proposal_artifact.dart';
 import '../services/ai_service.dart';
 import '../services/agent_tools/ask_user_tool.dart';
 import '../services/agent_tools/propose_note_edit_tool.dart';
+import '../services/api_key_manager.dart';
 import '../services/chat_session_service.dart';
 import '../services/biometric_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
+import '../theme/app_semantic_colors.dart';
 import '../utils/ai_smart_result_utils.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/agent_history_builder.dart';
@@ -66,6 +71,7 @@ import 'thoughter/session_history_page.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/add_note_dialog_parts.dart' show TagSelectionSection;
 import '../widgets/app_snackbar.dart';
+import 'ai_settings_page.dart';
 import 'note_full_editor_page.dart';
 import '../theme/theme_style.dart';
 
@@ -182,6 +188,7 @@ class _ThoughterPageState extends State<ThoughterPage>
   final Map<String, ({String replacementSessionId, int maxOriginGeneration})>
       _replacedDeletedSessionIds =
       <String, ({String replacementSessionId, int maxOriginGeneration})>{};
+  bool _settingsListenerAttached = false;
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
   StreamSubscription<AgentEvent>? _agentEventSubscription;
@@ -365,10 +372,11 @@ class _ThoughterPageState extends State<ThoughterPage>
 
   bool get _isAgentMode => _currentMode == ThoughterPageMode.agent;
 
-  /// 检查当前模型是否支持思考/推理模式
+  /// 检查当前 Thoughter 任务绑定的模型是否支持思考/推理模式
   bool get _currentModelSupportsThinking {
     if (!_settingsReady) return false;
-    final provider = _settingsService.multiAISettings.currentProvider;
+    final provider =
+        _settingsService.multiAISettings.resolveProviderForTask(AITask.agent);
     return provider?.supportsThinking ?? false;
   }
 

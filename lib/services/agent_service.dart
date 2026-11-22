@@ -8,6 +8,7 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 import '../constants/ai_provider_presets.dart';
 import '../models/agent_memory.dart';
 import '../models/ai_provider_settings.dart';
+import '../models/ai_task.dart';
 import '../models/chat_message.dart' as app_chat;
 import '../models/note_proposal_artifact.dart';
 import '../utils/ai_endpoint_security.dart';
@@ -113,12 +114,14 @@ class AgentNoteContext {
     required this.content,
     required this.documentKind,
     required this.documentRevision,
+    this.documentRevisionUnavailableReason,
   });
 
   final String? noteId;
   final String content;
   final NoteDocumentKind documentKind;
-  final String documentRevision;
+  final String? documentRevision;
+  final String? documentRevisionUnavailableReason;
 }
 
 /// Agent 运行时服务 — 基于 OpenAI 原生 tool calling 的 Agent Loop。
@@ -365,6 +368,7 @@ class AgentService extends ChangeNotifier {
 
     try {
       final provider = await _getProvider();
+      final contextTokenBudget = resolveContextTokenBudget(provider);
       final memoryEnabled = _memoryService?.isEnabled ?? false;
       final memoryGeneration = _memoryService?.captureGeneration;
       final systemPrompt = buildSystemPrompt(
@@ -402,7 +406,7 @@ class AgentService extends ChangeNotifier {
         }
         if (round >= maxToolRounds) {
           _setStatus('', runId: runId);
-          pruneMessages(messages);
+          pruneMessages(messages, contextTokenBudget: contextTokenBudget);
           final summary = await _requestFinalSummary(
             provider: provider,
             messages: messages,
@@ -429,7 +433,7 @@ class AgentService extends ChangeNotifier {
         _emitEvent(AgentThinkingEvent(), runId: runId);
 
         // 每轮请求前裁剪上下文，避免工具结果无上限累积。
-        pruneMessages(messages);
+        pruneMessages(messages, contextTokenBudget: contextTokenBudget);
 
         final result = await _streamCompletion(
           provider: provider,
@@ -783,7 +787,7 @@ class AgentService extends ChangeNotifier {
 
   Future<AIProviderSettings> _getProvider() async {
     final multiSettings = _settingsService.multiAISettings;
-    final provider = multiSettings.currentProvider;
+    final provider = multiSettings.resolveProviderForTask(AITask.agent);
     if (provider == null) {
       throw const AgentRequestException(AgentFailureType.noProvider);
     }
@@ -1058,9 +1062,7 @@ class AgentService extends ChangeNotifier {
   DateTime _lastGeminiRequestTime = DateTime.fromMillisecondsSinceEpoch(0);
 
   Future<void> _paceGeminiRequestIfNeeded(AIProviderSettings provider) async {
-    final isGemini = provider.id == 'gemini' ||
-        provider.apiUrl.contains('generativelanguage.googleapis.com');
-    if (!isGemini) return;
+    if (!provider.isGemini) return;
 
     final now = DateTime.now();
     final elapsed = now.difference(_lastGeminiRequestTime).inMilliseconds;
@@ -1071,9 +1073,7 @@ class AgentService extends ChangeNotifier {
   }
 
   List<String> _modelsToTryFor(AIProviderSettings provider) {
-    final isGemini = provider.id == 'gemini' ||
-        provider.apiUrl.contains('generativelanguage.googleapis.com');
-    if (!isGemini) {
+    if (!provider.isGemini) {
       return [provider.model];
     }
     final configured = provider.model.trim();
@@ -1098,8 +1098,7 @@ class AgentService extends ChangeNotifier {
     final headers = Map<String, String>.from(provider.buildHeaders())
       ..removeWhere((key, _) => key.toLowerCase() == 'content-type');
 
-    if (provider.id == 'openrouter' ||
-        provider.apiUrl.contains('openrouter.ai')) {
+    if (provider.isOpenRouter) {
       headers['HTTP-Referer'] ??= 'https://thoughtecho.app';
       headers['X-Title'] ??= 'ThoughtEcho App';
     }
@@ -1403,15 +1402,57 @@ class AgentService extends ChangeNotifier {
     // 绑定笔记作为独立数据消息，避免把私人正文嵌入系统提示词。
     if (noteContext != null) {
       final noteId = noteContext.noteId;
+      final revision = noteContext.documentRevision;
+      const malformedDeltaReasons = <String>{
+        'invalid_stored_delta',
+        'invalid_ops',
+        'invalid_op',
+        'invalid_attributes',
+        'line_attribute_without_newline',
+        'plain_attributes_not_allowed',
+      };
+      const unsupportedFormattingReasons = <String>{
+        'unsafe_link',
+        'unsupported_attribute',
+        'invalid_attribute_value',
+        'embed_not_allowed',
+      };
+      final unavailableReason = noteContext.documentRevisionUnavailableReason;
+      final String readOnlyStatusLine;
+      if (unavailableReason == 'empty_document') {
+        readOnlyStatusLine = noteContext.content.trim().isEmpty
+            ? '状态: 该笔记当前正文为空，没有可用的编辑基线 document_revision；'
+                '请直接回应用户，不要调用 propose_note_edit 修改原笔记（如需新建内容可使用 propose_note_create）。\n'
+            : '状态: 该笔记存储的富文本插入内容为空且无法生成编辑基线，当前仅提供只读纯文本正文，没有可用的 document_revision；'
+                '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
+      } else if (unavailableReason != null &&
+          malformedDeltaReasons.contains(unavailableReason)) {
+        readOnlyStatusLine =
+            '状态: 该笔记存储的富文本数据无法解析为编辑基线，当前仅提供只读纯文本正文，没有可用的 document_revision；'
+            '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
+      } else if (unavailableReason != null &&
+          unsupportedFormattingReasons.contains(unavailableReason)) {
+        readOnlyStatusLine =
+            '状态: 该笔记内容正常可读，但包含暂不支持代理直接编辑的格式（如非网页链接或特殊样式），当前仅提供只读纯文本正文，没有可用的 document_revision；'
+            '请直接基于正文回答或分析，不要声称笔记损坏，也不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
+      } else {
+        readOnlyStatusLine = '状态: 当前仅提供该笔记的只读纯文本正文，没有可用的编辑基线 document_revision；'
+            '请直接基于正文回答或分析，不要调用 propose_note_edit 修改原笔记（如需另存新内容可使用 propose_note_create）。\n';
+      }
       // 草稿（还没入库）不能伪造一个 note_id 塞给模型——它既没法拿去调编辑工具，
       // 又会被当成事实汇报给用户（「这条笔记未保存」）。直接说清楚状态即可。
+      // 已入库笔记若无法计算编辑基线 revision，仅提供只读纯文本上下文，不伪造替代 revision。
       final identityLines = noteId == null
           ? '状态: 这是尚未保存到数据库的草稿，没有 note_id。\n'
               '不要声称笔记「未保存」或据此拒绝工作；要落库请用 propose_note_create，'
               '不要调用需要 note_id 的编辑工具。\n'
-          : 'note_id: ${escapeUntrustedText(noteId)}\n'
-              'document_kind: ${noteContext.documentKind.name}\n'
-              'document_revision: ${noteContext.documentRevision}\n';
+          : revision == null
+              ? 'note_id: ${escapeUntrustedText(noteId)}\n'
+                  'document_kind: ${noteContext.documentKind.name}\n'
+                  '$readOnlyStatusLine'
+              : 'note_id: ${escapeUntrustedText(noteId)}\n'
+                  'document_kind: ${noteContext.documentKind.name}\n'
+                  'document_revision: $revision\n';
       messages.add(openai.ChatMessage.user(
         '[当前绑定笔记 - 应用提供的引用信息]\n'
         '$identityLines'
@@ -1803,6 +1844,19 @@ $memoryGuidance## 应用特性（避免重复劳动）
             total + estimateTokens(jsonEncode(message.toJson())),
       );
 
+  /// 计算当前 provider 对应的上下文裁剪 token 预算。
+  ///
+  /// 若 `modelMetadata.contextWindow` 有效（> 0），优先使用模型真实窗口大小；
+  /// 否则回退到保守预算 [_defaultContextTokenBudget]。
+  @visibleForTesting
+  static int resolveContextTokenBudget(AIProviderSettings? provider) {
+    final contextWindow = provider?.modelMetadata?.contextWindow;
+    if (contextWindow != null && contextWindow > 0) {
+      return contextWindow;
+    }
+    return _defaultContextTokenBudget;
+  }
+
   /// 零 LLM 成本的上下文裁剪：把较早轮次的工具结果替换为一行占位符。
   ///
   /// - 只改写 `role:'tool'` 消息的内容，从不删除消息，
@@ -1994,7 +2048,7 @@ $memoryGuidance## 应用特性（避免重复劳动）
     return !provider.isAnthropicMessagesApi;
   }
 
-  @visibleForTesting
+  /// 规范化 AgentService 使用的 OpenAI 兼容 Base URL（保留非 `/chat/completions` 自定义网关前缀）。
   static String normalizeOpenAIBaseUrl(String apiUrl) {
     final trimmed = apiUrl.trim();
     final Uri uri;

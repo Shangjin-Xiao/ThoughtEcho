@@ -78,6 +78,19 @@ class GetNoteDetailTool extends AgentTool {
       final tagsMap = await _db.getTagsByIds(idsToFetch);
       final nameMap = tagsMap.map((id, tag) => MapEntry(id, tag.name));
 
+      final kind = ProposeNoteEditTool.kindForQuote(q);
+      List<Map<String, dynamic>>? ops;
+      String? documentRevision;
+      String? revisionUnavailableReason;
+      try {
+        ops = ProposeNoteEditTool.opsForQuote(q);
+        documentRevision = AgentNoteDocumentCodec.revisionOf(ops);
+      } on AgentNoteDocumentException catch (e) {
+        revisionUnavailableReason = e.code;
+      } on FormatException {
+        revisionUnavailableReason = 'invalid_stored_delta';
+      }
+
       final response = <String, Object?>{
         'id': q.id,
         // 和 explore_notes 对齐：`excerpt` / `original`。必须排在 content
@@ -93,13 +106,13 @@ class GetNoteDetailTool extends AgentTool {
         'content': wrapNoteContent(q.content, noteId: q.id),
         'date': q.date,
         'content_length': q.content.length,
-        'document_kind': ProposeNoteEditTool.kindForQuote(q).name,
-        'document_revision': ProposeNoteEditTool.revisionForQuote(q),
+        'document_kind': kind.name,
+        if (documentRevision != null) 'document_revision': documentRevision,
+        if (revisionUnavailableReason != null)
+          'document_revision_unavailable': revisionUnavailableReason,
       };
-      if (ProposeNoteEditTool.kindForQuote(q).name == 'rich') {
-        response['document_ops'] = AgentNoteDocumentCodec.sanitizeForModel(
-          ProposeNoteEditTool.opsForQuote(q),
-        );
+      if (kind.name == 'rich' && ops != null) {
+        response['document_ops'] = AgentNoteDocumentCodec.sanitizeForModel(ops);
       }
 
       // 优先使用 poiName，其次使用 location

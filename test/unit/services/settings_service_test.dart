@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/ai_task.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
@@ -1260,6 +1261,68 @@ void main() {
       expect(savedKey, equals('sk-safe-key'));
     });
 
+    test(
+        'restoreAllSettingsFromBackup preserves valid taskProviderIds and sanitizes invalid keys or dangling providerIds',
+        () async {
+      addTearDown(() async {
+        await AppPreferencesService().remove('multi_ai_settings');
+        await AppPreferencesService().remove('ai_settings');
+        await AppPreferencesService().remove('ai_auto_enable_pending_v1');
+        await APIKeyManager().removeProviderApiKey('provider_fast');
+        await APIKeyManager().removeProviderApiKey('provider_reason');
+      });
+
+      final Map<String, dynamic> backupPayload = {
+        'multi_ai_settings': <String, dynamic>{
+          'currentProviderId': 'provider_fast',
+          'providers': <dynamic>[
+            <String, dynamic>{
+              'id': 'provider_fast',
+              'name': 'Fast Model',
+              'apiUrl': 'https://open.bigmodel.cn/api/paas/v4',
+              'model': 'glm-4-flash',
+              'providerSlug': 'zhipuai',
+            },
+            <String, dynamic>{
+              'id': 'provider_reason',
+              'name': 'Reason Model',
+              'apiUrl': 'https://api.deepseek.com/v1',
+              'model': 'deepseek-reasoner',
+              'providerSlug': 'deepseek',
+            },
+          ],
+          'taskProviderIds': <dynamic, dynamic>{
+            'dailyInsight': 'provider_fast',
+            'dreaming': 'provider_reason',
+            'periodicInsight': 'non_existent_provider',
+            'agent': 42,
+            'unknownTaskSlot': 'provider_fast',
+          },
+        },
+      };
+
+      await settingsService.restoreAllSettingsFromBackup(backupPayload);
+
+      final restored = settingsService.multiAISettings;
+      expect(restored.currentProviderId, 'provider_fast');
+      expect(restored.taskProviderIds.length, 2);
+      expect(
+        restored.resolveProviderForTask(AITask.dailyInsight)?.id,
+        'provider_fast',
+      );
+      expect(
+        restored.resolveProviderForTask(AITask.dreaming)?.id,
+        'provider_reason',
+      );
+      // Dangling periodicInsight & non-string agent were stripped and fall back to currentProvider
+      expect(restored.explicitProviderForTask(AITask.periodicInsight), isNull);
+      expect(restored.explicitProviderForTask(AITask.agent), isNull);
+      expect(
+        restored.resolveProviderForTask(AITask.periodicInsight)?.id,
+        'provider_fast',
+      );
+    });
+
     test('新用户配置有效 AI 服务时应自动开启相关 AI 功能', () async {
       // Arrange
       await settingsService.setHasCompletedOnboarding(false);
@@ -1424,6 +1487,98 @@ void main() {
         // Assert: 重建后确认内存与持久化保持最终调用的正确状态
         final rebuiltService = await SettingsService.create();
         expect(rebuiltService.hasCompletedOnboarding(), isTrue);
+      },
+    );
+
+    test(
+      'getAllSettingsForBackup and restoreAllSettingsFromBackup preserve smart_push_delivery_history_v1 and clear stale local history',
+      () async {
+        final prefs = AppPreferencesService();
+        addTearDown(() async {
+          await prefs.remove('smart_push_settings_v2');
+          await prefs.remove('smart_push_delivery_history_v1');
+        });
+
+        await prefs.setString(
+          'smart_push_settings_v2',
+          jsonEncode(<String, dynamic>{
+            'enabled': true,
+            'pushMode': 'smart',
+            'lastPushTime': '2026-05-09T08:00:00.000',
+            'recentlyPushedNoteIds': <String>['note-old'],
+          }),
+        );
+        await prefs.setString(
+          'smart_push_delivery_history_v1',
+          jsonEncode(<String, dynamic>{
+            'lastPushTime': '2026-05-10T09:30:00.000',
+            'recentlyPushedNoteIds': <String>['note-old', 'note-new'],
+          }),
+        );
+
+        final exported = settingsService.getAllSettingsForBackup();
+        expect(exported['smart_push_delivery_history_v1'], isA<Map>());
+        final exportedHistory = Map<String, dynamic>.from(
+          exported['smart_push_delivery_history_v1'] as Map,
+        );
+        expect(
+          exportedHistory['lastPushTime'],
+          equals('2026-05-10T09:30:00.000'),
+        );
+        expect(
+          exportedHistory['recentlyPushedNoteIds'],
+          equals(<String>['note-old', 'note-new']),
+        );
+        expect(exported['smart_push_settings_v2'], isA<Map>());
+        final exportedSettings = Map<String, dynamic>.from(
+          exported['smart_push_settings_v2'] as Map,
+        );
+        expect(
+          exportedSettings['lastPushTime'],
+          equals('2026-05-10T09:30:00.000'),
+        );
+        expect(
+          exportedSettings['recentlyPushedNoteIds'],
+          equals(<String>['note-old', 'note-new']),
+        );
+
+        // Simulate restoring onto a device that has stale local delivery history
+        await prefs.setString(
+          'smart_push_delivery_history_v1',
+          jsonEncode(<String, dynamic>{
+            'lastPushTime': '2026-05-12T22:00:00.000',
+            'recentlyPushedNoteIds': <String>['stale-local-note'],
+          }),
+        );
+        await settingsService.restoreAllSettingsFromBackup(exported);
+        final restoredHistory = jsonDecode(
+          prefs.getString('smart_push_delivery_history_v1')!,
+        ) as Map<String, dynamic>;
+        expect(
+          restoredHistory['lastPushTime'],
+          equals('2026-05-10T09:30:00.000'),
+        );
+        expect(
+          restoredHistory['recentlyPushedNoteIds'],
+          equals(<String>['note-old', 'note-new']),
+        );
+
+        // Restoring an older/clean backup without smart_push_delivery_history_v1
+        // must not leak stale device-local delivery history.
+        await prefs.setString(
+          'smart_push_delivery_history_v1',
+          jsonEncode(<String, dynamic>{
+            'lastPushTime': '2026-05-15T20:00:00.000',
+            'recentlyPushedNoteIds': <String>['stale-device-note'],
+          }),
+        );
+        await settingsService.restoreAllSettingsFromBackup(<String, dynamic>{
+          'smart_push_settings_v2': jsonEncode(<String, dynamic>{
+            'enabled': true,
+            'pushMode': 'smart',
+          }),
+        });
+        expect(prefs.getString('smart_push_delivery_history_v1'), isNull);
       },
     );
 

@@ -588,9 +588,7 @@ class DioNetworkUtils {
         headers['HTTP-Referer'] = 'https://thoughtecho.app';
         headers['X-Title'] = 'ThoughtEcho App';
       }
-    } else if (provider.isAnthropicMessagesApi ||
-        provider.apiUrl.contains('anthropic.com') ||
-        provider.id == 'anthropic') {
+    } else if (provider.isAnthropicMessagesApi) {
       headers['x-api-key'] = provider.apiKey;
       headers['anthropic-version'] = '2023-06-01';
     } else if (provider.apiUrl.contains('deepseek.com') ||
@@ -624,10 +622,8 @@ class DioNetworkUtils {
           adjustedData['stream'] == true || adjustedData['stream'] == 'true';
     }
 
-    // Anthropic特殊处理
-    if (provider.isAnthropicMessagesApi ||
-        provider.apiUrl.contains('anthropic.com') ||
-        provider.id == 'anthropic') {
+    // Anthropic 原生协议特殊处理
+    if (provider.isAnthropicMessagesApi) {
       // Anthropic API需要确保stream参数正确
       if (adjustedData.containsKey('stream') &&
           adjustedData['stream'] == true) {

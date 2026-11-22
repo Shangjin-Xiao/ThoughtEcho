@@ -24,6 +24,8 @@ import 'package:thoughtecho/widgets/note_list_view.dart';
 import '../test_harness.dart';
 
 class _FakeChatSessionService extends ChatSessionService {
+  _FakeChatSessionService() : super(openOwnDatabase: false);
+
   @override
   Future<List<ChatSession>> getAllSessions({
     int limit = 50,

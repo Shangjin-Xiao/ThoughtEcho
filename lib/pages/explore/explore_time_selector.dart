@@ -121,9 +121,12 @@ extension _ExploreTimeSelector on _ExplorePageState {
             ReportPeriodUtils.offsetFromNow(value, _selectedDate, now: now) ==
                 ReportPeriodOffset.current;
         if (alreadyCurrent) return;
+        _invalidateActiveInsight();
         _updateState(() {
           _selectedPeriod = value;
           _selectedDate = now;
+          _insightText = '';
+          _insightLoading = false;
         });
         try {
           unawaited(
@@ -148,8 +151,18 @@ extension _ExploreTimeSelector on _ExplorePageState {
     );
 
     if (picked != null && picked != _selectedDate) {
+      final scopeChanged =
+          _ExplorePageState._periodScopeKey(_selectedPeriod, picked) !=
+              _ExplorePageState._periodScopeKey(_selectedPeriod, _selectedDate);
+      if (scopeChanged) {
+        _invalidateActiveInsight();
+      }
       _updateState(() {
         _selectedDate = picked;
+        if (scopeChanged) {
+          _insightText = '';
+          _insightLoading = false;
+        }
       });
       _loadPeriodData();
     }

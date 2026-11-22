@@ -189,6 +189,7 @@ extension _ThoughterUI on _ThoughterPageState {
 
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 60,
         // 顶栏和页面同底色。
         //
         // 主题里顶栏是 surfaceContainerLow 而页面是 surface，两个色只差一点点，
@@ -199,18 +200,25 @@ extension _ThoughterUI on _ThoughterPageState {
         // 与其留一条不说话的缝，不如让顶栏融进页面，边界交给对话区上缘的
         // 渐隐——它只在真的有内容被盖住时才出现，正是那条缝想说没说清的事。
         backgroundColor: theme.colorScheme.surface,
-        title: Row(
+        title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Flexible(
-              child: Text(
-                // 编辑器的所有 AI 功能都汇入 Thoughter，标题不再按入口分叉
-                l10n.aiAssistantLabel,
-                overflow: TextOverflow.ellipsis,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    // 编辑器的所有 AI 功能都汇入 Thoughter，标题不再按入口分叉
+                    l10n.aiAssistantLabel,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const ExperimentalBadge(compact: true),
+              ],
             ),
-            const SizedBox(width: 6),
-            const ExperimentalBadge(compact: true),
+            const SizedBox(height: 4),
+            _buildModelSwitcherPill(context, theme, l10n),
           ],
         ),
         centerTitle: true,
@@ -279,7 +287,7 @@ extension _ThoughterUI on _ThoughterPageState {
                                   padding: _kMessageInsets,
                                   child: _BlinkingCursor(
                                     key: const ValueKey('ai_assistant_waiting'),
-                                    color: theme.colorScheme.onSurfaceVariant,
+                                    style: _waitingCursorStyle(theme),
                                   ),
                                 );
                               }
@@ -773,6 +781,13 @@ extension _ThoughterUI on _ThoughterPageState {
     );
   }
 
+  /// 复用 Markdown 回复段落的排版度量（字号与行高），仅替换为弱化前景色，
+  /// 确保等待光标与后续流式正文首段行高同源，修改任一处都不会恢复跳动。
+  TextStyle? _waitingCursorStyle(ThemeData theme) =>
+      _getMarkdownStyleSheet(theme, theme.colorScheme.onSurface)
+          .p
+          ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+
   /// AI 回复：不套气泡，正文直接铺在页面背景上占满可读宽度。
   /// markdown 里的标题、列表、代码块套气泡会被挤窄，长文阅读体验差。
   Widget _buildAgentMessage(
@@ -810,7 +825,7 @@ extension _ThoughterUI on _ThoughterPageState {
             ),
           // 还没有首个 token：正文是空的，光标先自己闪着占住位置
           if (!hasContent && isStreaming)
-            _BlinkingCursor(color: theme.colorScheme.onSurfaceVariant)
+            _BlinkingCursor(style: _waitingCursorStyle(theme))
           else if (hasContent)
             MarkdownBody(
               data: isStreaming
@@ -1394,12 +1409,15 @@ extension _ThoughterUI on _ThoughterPageState {
     final note = await db.getQuoteById(artifact.noteId!);
     if (!mounted) return null;
     if (note != null && !await _authorizeProposalNote(note)) return null;
-    if (note == null ||
-        ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
+    final currentRevision =
+        note == null ? null : ProposeNoteEditTool.tryRevisionForQuote(note);
+    if (currentRevision == null ||
+        artifact.baseRevision == null ||
+        currentRevision != artifact.baseRevision) {
       _showRichEditConflict();
       return null;
     }
-    final proposed = _quoteFromArtifact(note, artifact);
+    final proposed = _quoteFromArtifact(note!, artifact);
     final tags = await db.getTags();
     if (!mounted) return null;
     String? savedId;
@@ -1844,6 +1862,156 @@ extension _ThoughterUI on _ThoughterPageState {
     }
   }
 
+  /// 顶栏标题下方的轻量模型切换胶囊。
+  ///
+  /// 展示当前 `AITask.agent` 生效的模型名称（未单独指定时即为全局默认配置），
+  /// 生成进行中（`_isLoading == true`）禁用点击，避免流式响应中途切模型造成状态错位。
+  Widget _buildModelSwitcherPill(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final settingsService = _settingsReady
+        ? _settingsService
+        : Provider.of<SettingsService?>(context, listen: false);
+    final activeProvider =
+        settingsService?.multiAISettings.resolveProviderForTask(AITask.agent);
+    final String label;
+    if (activeProvider == null) {
+      label = l10n.thoughterModelUnconfigured;
+    } else if (activeProvider.model.trim().isNotEmpty) {
+      label = activeProvider.model.trim();
+    } else {
+      label = activeProvider.name;
+    }
+
+    final enabled = !_isLoading && settingsService != null;
+    final foreground = theme.colorScheme.onSurfaceVariant
+        .withValues(alpha: enabled ? 1.0 : 0.45);
+    final radius = BorderRadius.circular(
+      AppShapeTokens.of(context).buttonRadius,
+    );
+
+    return Tooltip(
+      message: l10n.thoughterModelSwitcherTooltip,
+      child: Material(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: const ValueKey('thoughter_model_switcher'),
+          borderRadius: radius,
+          onTap:
+              enabled ? () => _showThoughterModelSwitcherSheet(context) : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: foreground,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.expand_more,
+                  size: 14,
+                  color: foreground,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showThoughterModelSwitcherSheet(BuildContext context) async {
+    if (_isLoading) return;
+    _dropInputFocus();
+
+    final settingsService = _settingsReady
+        ? _settingsService
+        : Provider.of<SettingsService?>(context, listen: false);
+    if (settingsService == null) return;
+
+    final l10n = AppLocalizations.of(context);
+    final action = await showModalBottomSheet<_ThoughterModelSheetAction>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _ThoughterModelSwitcherSheet(
+        multiSettings: settingsService.multiAISettings,
+      ),
+    );
+    if (action == null || !mounted || !context.mounted) return;
+
+    if (action.openSettings) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => const AISettingsPage()),
+      );
+      if (mounted && _settingsReady) {
+        _onSettingsServiceChanged();
+      }
+      return;
+    }
+
+    final currentMulti = settingsService.multiAISettings;
+    final persistedProviderId = currentMulti.taskProviderIds[AITask.agent];
+    final nextProviderId = action.useDefault ? null : action.providerId;
+    if (nextProviderId == persistedProviderId) return;
+
+    final updatedMulti =
+        currentMulti.withTaskProvider(AITask.agent, nextProviderId);
+    try {
+      await settingsService.saveMultiAISettings(updatedMulti);
+    } catch (e, stack) {
+      logError(
+        '保存 Thoughter 任务模型配置失败: $e',
+        error: e,
+        stackTrace: stack,
+        source: 'ThoughterPage._showThoughterModelSwitcherSheet',
+      );
+      if (!mounted || !context.mounted) return;
+      AppSnackBar.error(context, l10n.saveSettingsError(e.toString()));
+      return;
+    }
+
+    AptabaseHelper.trackEvent('feature_used', {
+      'action': 'ai_task_provider_select',
+      'task': AITask.agent.name,
+      'uses_default': nextProviderId == null,
+    });
+
+    if (!mounted || !context.mounted) return;
+    if (_settingsReady) {
+      _onSettingsServiceChanged();
+    } else {
+      _setState(() {});
+    }
+
+    if (nextProviderId == null) {
+      AppSnackBar.info(
+        context,
+        l10n.aiTaskSwitchedToDefault(l10n.aiTaskAgentTitle),
+      );
+    } else {
+      final assigned = updatedMulti.explicitProviderForTask(AITask.agent);
+      if (assigned != null) {
+        AppSnackBar.info(
+          context,
+          l10n.aiTaskSwitchedToProvider(l10n.aiTaskAgentTitle, assigned.name),
+        );
+      }
+    }
+  }
+
   /// 判断消息是否包含交互式卡片（需要保留离屏 Widget 状态）
   bool _shouldKeepAliveMessage(app_chat.ChatMessage message) {
     final meta = message.parsedMeta;
@@ -1918,9 +2086,9 @@ class _MessageAction extends StatelessWidget {
 /// 还没有正文可接的那段时间——刚发出提问、正在调工具——由它顶上，用的是同一个
 /// 字形，于是从"等着"到"开始说"是同一个光标在延续，而不是换了个动画。
 class _BlinkingCursor extends StatefulWidget {
-  final Color color;
+  final TextStyle? style;
 
-  const _BlinkingCursor({super.key, required this.color});
+  const _BlinkingCursor({super.key, this.style});
 
   @override
   State<_BlinkingCursor> createState() => _BlinkingCursorState();
@@ -1961,14 +2129,12 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return FadeTransition(
-      opacity: _opacity,
-      child: Text(
-        _kStreamingCursor,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          color: widget.color,
-          height: 1.65,
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: _opacity,
+        child: Text(
+          _kStreamingCursor,
+          style: widget.style,
         ),
       ),
     );
@@ -2059,5 +2225,226 @@ class _KeepAliveMessageItemState extends State<_KeepAliveMessageItem>
   Widget build(BuildContext context) {
     super.build(context);
     return widget.child;
+  }
+}
+
+class _ThoughterModelSheetAction {
+  const _ThoughterModelSheetAction.followDefault()
+      : useDefault = true,
+        openSettings = false,
+        providerId = null;
+
+  const _ThoughterModelSheetAction.explicit(this.providerId)
+      : useDefault = false,
+        openSettings = false;
+
+  const _ThoughterModelSheetAction.manageServices()
+      : useDefault = false,
+        openSettings = true,
+        providerId = null;
+
+  final bool useDefault;
+  final bool openSettings;
+  final String? providerId;
+}
+
+class _ThoughterModelSwitcherSheet extends StatefulWidget {
+  const _ThoughterModelSwitcherSheet({
+    required this.multiSettings,
+  });
+
+  final MultiAISettings multiSettings;
+
+  @override
+  State<_ThoughterModelSwitcherSheet> createState() =>
+      _ThoughterModelSwitcherSheetState();
+}
+
+class _ThoughterModelSwitcherSheetState
+    extends State<_ThoughterModelSwitcherSheet> {
+  final Map<String, bool> _hasApiKey = <String, bool>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadKeyStatuses();
+  }
+
+  Future<void> _loadKeyStatuses() async {
+    final apiKeyManager = APIKeyManager();
+    final statuses = <String, bool>{};
+    for (final provider in widget.multiSettings.providers) {
+      statuses[provider.id] = provider.apiKey.trim().isNotEmpty ||
+          await apiKeyManager.hasValidProviderApiKey(provider.id);
+    }
+    if (!mounted) return;
+    setState(() {
+      _hasApiKey
+        ..clear()
+        ..addAll(statuses);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final semantic = AppSemanticColors.of(context);
+    final multiSettings = widget.multiSettings;
+    final defaultProvider = multiSettings.currentProvider;
+    final selectedExplicitId =
+        multiSettings.explicitProviderIdForTask(AITask.agent);
+    final isFollowingDefault = selectedExplicitId == null;
+
+    final defaultSubtitle = defaultProvider != null
+        ? l10n.aiTaskFollowDefaultSubtitle(
+            defaultProvider.name,
+            defaultProvider.model.isEmpty
+                ? l10n.noProvider
+                : defaultProvider.model,
+          )
+        : l10n.aiTaskFollowDefaultUnsetSubtitle;
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.76,
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 16),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+              child: Text(
+                l10n.thoughterModelSheetTitle,
+                style: theme.textTheme.titleLarge,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                l10n.thoughterModelSheetSubtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (multiSettings.providers.isNotEmpty) ...[
+              ListTile(
+                key: const ValueKey('thoughter_model_option_default'),
+                leading: Icon(
+                  Icons.sync_alt,
+                  color: isFollowingDefault ? theme.colorScheme.primary : null,
+                ),
+                title: Text(l10n.aiTaskFollowDefaultOption),
+                subtitle: Text(defaultSubtitle),
+                trailing: isFollowingDefault
+                    ? Icon(Icons.check, color: theme.colorScheme.primary)
+                    : null,
+                onTap: () => Navigator.pop(
+                  context,
+                  const _ThoughterModelSheetAction.followDefault(),
+                ),
+              ),
+              const Divider(height: 1),
+              for (final provider in multiSettings.providers) ...[
+                Builder(
+                  builder: (context) {
+                    final preset =
+                        AIProviderPresets.bySlugOrId(provider.providerSlug) ??
+                            AIProviderPresets.matchApiUrl(provider.apiUrl);
+                    final needsKey = preset?.requiresApiKey ?? true;
+                    final keyOk = (_hasApiKey[provider.id] ??
+                            provider.apiKey.trim().isNotEmpty) ||
+                        !needsKey;
+                    final isSelected = selectedExplicitId == provider.id;
+
+                    return ListTile(
+                      key: ValueKey('thoughter_model_option_${provider.id}'),
+                      leading: Icon(
+                        Icons.dns_outlined,
+                        color: isSelected ? theme.colorScheme.primary : null,
+                      ),
+                      title: Text(
+                        provider.name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            provider.model.isEmpty
+                                ? l10n.noProvider
+                                : provider.model,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                keyOk
+                                    ? Icons.verified_user_outlined
+                                    : Icons.error_outline,
+                                size: 14,
+                                color: keyOk
+                                    ? semantic.success
+                                    : theme.colorScheme.error,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                keyOk
+                                    ? l10n.statusKeyConfigured
+                                    : l10n.statusKeyMissing,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: keyOk
+                                      ? semantic.success
+                                      : theme.colorScheme.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      trailing: isSelected
+                          ? Icon(Icons.check, color: theme.colorScheme.primary)
+                          : null,
+                      enabled: provider.isEnabled,
+                      onTap: provider.isEnabled
+                          ? () => Navigator.pop(
+                                context,
+                                _ThoughterModelSheetAction.explicit(
+                                  provider.id,
+                                ),
+                              )
+                          : null,
+                    );
+                  },
+                ),
+              ],
+              const Divider(height: 1),
+            ],
+            ListTile(
+              key: const ValueKey('thoughter_manage_ai_services'),
+              leading: Icon(
+                Icons.settings_outlined,
+                color: theme.colorScheme.primary,
+              ),
+              title: Text(
+                l10n.thoughterManageAiServices,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.pop(
+                context,
+                const _ThoughterModelSheetAction.manageServices(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

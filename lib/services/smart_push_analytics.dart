@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/smart_push_settings.dart';
+import '../utils/platform_helper.dart';
 import '../utils/string_utils.dart';
 import '../utils/app_logger.dart';
 import 'app_preferences_service.dart';
@@ -45,7 +47,11 @@ class PushAllowance {
 
 /// SOTA 智能推送分析服务
 class SmartPushAnalytics extends ChangeNotifier {
+  static const String _crossIsolateLockName = 'smart_push_analytics_v1';
+  static final Object _analyticsLockZoneKey = Object();
+
   final AppPreferencesService _mmkv;
+  final String? _lockFilePathOverride;
   final Random _random = Random();
 
   // 存储键
@@ -57,6 +63,15 @@ class SmartPushAnalytics extends ChangeNotifier {
   static const String _unengagedStreakKey = 'smart_push_unengaged_streak';
   static const String _pendingSendKey = 'smart_push_pending_send';
   static const String _dailyCountKey = 'smart_push_daily_count';
+  static const String _clickedNotificationIdsKey =
+      'smart_push_clicked_notification_ids_v1';
+  static const String _settledUnengagedIdsKey =
+      'smart_push_settled_unengaged_ids_v1';
+  static const String _settledEngagedIdsKey =
+      'smart_push_settled_engaged_ids_v1';
+  static const String _sentNotificationIdsKey =
+      'smart_push_sent_notification_ids_v1';
+  static const int _maxTrackedNotificationIds = 100;
 
   // 配置常量
   static const int maxAppOpenRecords = 200; // 保留最近 200 条打开记录
@@ -90,88 +105,119 @@ class SmartPushAnalytics extends ChangeNotifier {
     'pastNote',
   ];
 
-  SmartPushAnalytics({AppPreferencesService? mmkvService})
-      : _mmkv = mmkvService ?? AppPreferencesService();
+  SmartPushAnalytics({
+    AppPreferencesService? mmkvService,
+    @visibleForTesting String? lockFilePathOverride,
+  })  : _mmkv = mmkvService ?? AppPreferencesService(),
+        _lockFilePathOverride = lockFilePathOverride;
+
+  Future<void> _reloadSharedStorage() async {
+    try {
+      await _mmkv.reload();
+    } catch (_) {}
+  }
+
+  Future<T> _withAnalyticsLock<T>(Future<T> Function() action) {
+    if (Zone.current[_analyticsLockZoneKey] == true) {
+      return action();
+    }
+    return PlatformHelper.withCrossIsolateLock<T>(
+      _crossIsolateLockName,
+      () async {
+        await _reloadSharedStorage();
+        return await runZoned(
+          action,
+          zoneValues: <Object?, Object?>{_analyticsLockZoneKey: true},
+        );
+      },
+      customLockFilePath: _lockFilePathOverride,
+    );
+  }
 
   // ============================================================
   // 1. 响应性热图 - 用户 App 打开时间分析
   // ============================================================
 
   /// 记录用户打开 App 的时间
-  Future<void> recordAppOpen() async {
-    try {
-      final now = DateTime.now();
-      final records = await _getAppOpenRecords();
-
-      records.add(now.toIso8601String());
-
-      // 保持记录数量在限制内
-      while (records.length > maxAppOpenRecords) {
-        records.removeAt(0);
-      }
-
-      await _saveAppOpenRecords(records);
-      AppLogger.d('记录 App 打开时间: ${now.hour}:${now.minute}');
-    } catch (e, stack) {
-      AppLogger.e(
-        '记录 App 打开时间失败',
-        error: e,
-        stackTrace: stack,
-        source: 'SmartPushAnalytics',
-      );
-    }
-  }
-
-  /// 计算用户响应性热图（24小时分布）
-  ///
-  /// 返回: `Map<hour, score>` 其中 score 是该小时的响应性得分 (0.0-1.0)
-  Future<Map<int, double>> calculateResponsivenessHeatmap() async {
-    final records = await _getAppOpenRecords();
-    final heatmap = <int, double>{};
-
-    // 初始化所有小时
-    for (int h = 0; h < 24; h++) {
-      heatmap[h] = 0.0;
-    }
-
-    if (records.isEmpty) {
-      // 没有数据时返回默认热图
-      return _getDefaultHeatmap();
-    }
-
-    // 统计每小时的打开次数
-    final hourCounts = <int, int>{};
-    for (int h = 0; h < 24; h++) {
-      hourCounts[h] = 0;
-    }
-
-    for (final record in records) {
+  Future<void> recordAppOpen({DateTime? openedAt}) {
+    return _withAnalyticsLock(() async {
       try {
-        final dt = DateTime.parse(record);
-        hourCounts[dt.hour] = (hourCounts[dt.hour] ?? 0) + 1;
+        final now = openedAt ?? DateTime.now();
+        final records = await _getAppOpenRecords();
+
+        records.add(now.toIso8601String());
+
+        // 保持记录数量在限制内
+        while (records.length > maxAppOpenRecords) {
+          records.removeAt(0);
+        }
+
+        await _saveAppOpenRecords(records);
+        AppLogger.d('记录 App 打开时间: ${now.hour}:${now.minute}');
       } catch (e, stack) {
         AppLogger.e(
-          '解析应用打开记录失败',
+          '记录 App 打开时间失败',
           error: e,
           stackTrace: stack,
           source: 'SmartPushAnalytics',
         );
       }
-    }
+    });
+  }
 
-    // 找到最大值用于归一化
-    final maxCount = hourCounts.values.reduce(max);
-    if (maxCount == 0) return _getDefaultHeatmap();
+  /// 计算用户响应性热图（24小时分布）
+  ///
+  /// 返回: `Map<hour, score>` 其中 score 是该小时的响应性得分 (0.0-1.0)
+  Future<Map<int, double>> calculateResponsivenessHeatmap() {
+    return _withAnalyticsLock(() async {
+      final records = await _getAppOpenRecords();
+      final heatmap = <int, double>{};
 
-    // 归一化到 0.0-1.0
-    for (int h = 0; h < 24; h++) {
-      heatmap[h] = (hourCounts[h] ?? 0) / maxCount;
-    }
+      // 初始化所有小时
+      for (int h = 0; h < 24; h++) {
+        heatmap[h] = 0.0;
+      }
 
-    // 应用时间衰减：最近的记录权重更高
-    await _applyTimeDecay(heatmap, records);
+      if (records.isEmpty) {
+        // 没有数据时返回默认热图
+        return _getDefaultHeatmap();
+      }
 
-    return heatmap;
+      // 统计每小时的打开次数
+      final hourCounts = <int, int>{};
+      for (int h = 0; h < 24; h++) {
+        hourCounts[h] = 0;
+      }
+
+      for (final record in records) {
+        try {
+          final dt = DateTime.parse(record);
+          final hour = _extractRecordWallHour(record, dt);
+          hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
+        } catch (e, stack) {
+          AppLogger.e(
+            '解析应用打开记录失败',
+            error: e,
+            stackTrace: stack,
+            source: 'SmartPushAnalytics',
+          );
+        }
+      }
+
+      // 找到最大值用于归一化
+      final maxCount = hourCounts.values.reduce(max);
+      if (maxCount == 0) return _getDefaultHeatmap();
+
+      // 归一化到 0.0-1.0
+      for (int h = 0; h < 24; h++) {
+        heatmap[h] = (hourCounts[h] ?? 0) / maxCount;
+      }
+
+      // 应用时间衰减：最近的记录权重更高
+      await _applyTimeDecay(heatmap, records);
+
+      return heatmap;
+    });
   }
 
   /// 获取最佳推送时间窗口
@@ -262,7 +308,8 @@ class SmartPushAnalytics extends ChangeNotifier {
       try {
         final dt = DateTime.parse(record);
         if (dt.isAfter(recentCutoff)) {
-          recentCounts[dt.hour] = (recentCounts[dt.hour] ?? 0) + 1;
+          final hour = _extractRecordWallHour(record, dt);
+          recentCounts[hour] = (recentCounts[hour] ?? 0) + 1;
         }
       } catch (e, stack) {
         AppLogger.e(
@@ -281,6 +328,16 @@ class SmartPushAnalytics extends ChangeNotifier {
       final recentScore = (recentCounts[h] ?? 0) / maxRecent;
       heatmap[h] = (heatmap[h]! * 0.4) + (recentScore * 0.6);
     }
+  }
+
+  int _extractRecordWallHour(String record, DateTime parsed) {
+    if (record.length >= 13 && record.codeUnitAt(10) == 0x54) {
+      final hour = int.tryParse(record.substring(11, 13));
+      if (hour != null && hour >= 0 && hour < 24) {
+        return hour;
+      }
+    }
+    return parsed.hour;
   }
 
   Future<List<String>> _getAppOpenRecords() async {
@@ -309,47 +366,403 @@ class SmartPushAnalytics extends ChangeNotifier {
   // ============================================================
 
   /// 获取内容类型点击学习得分快照，供候选排序使用。
-  Future<Map<String, double>> getContentTypeScores() async {
-    return Map.unmodifiable(await _getContentScores());
+  Future<Map<String, double>> getContentTypeScores() {
+    return _withAnalyticsLock(() async {
+      return Map.unmodifiable(await _getContentScores());
+    });
   }
 
   /// 记录用户忽略/关闭通知（触发冷却期）
-  Future<void> recordDismissal() async {
-    await _mmkv.setString(_lastDismissalKey, DateTime.now().toIso8601String());
-    AppLogger.d('记录通知被忽略，进入冷却期');
+  Future<void> recordDismissal() {
+    return _withAnalyticsLock(() async {
+      await _mmkv.setString(
+        _lastDismissalKey,
+        DateTime.now().toIso8601String(),
+      );
+      AppLogger.d('记录通知被忽略，进入冷却期');
+    });
   }
 
   /// 记录用户点击通知（正向反馈）
   ///
-  /// 只在待结算记录上打个「已点击」标记，真正的分数更新和连续未点击复位
-  /// 交给下一次推送前的 [settlePendingSend]。这样点击与未点击走同一条
-  /// 结算路径，不会出现「点击加了 success 计数但分数没动」的断裂。
-  Future<void> recordInteraction(String contentType) async {
-    final raw = _mmkv.getString(_pendingSendKey);
-    if (raw != null && raw.isNotEmpty && raw.startsWith('$contentType|')) {
-      await _mmkv.setString(_pendingSendKey, '$contentType|1');
-      AppLogger.d('记录通知交互: $contentType（已标记待结算为已点击）');
-      return;
-    }
+  /// 支持按 [notificationId] 追踪点击状态：
+  /// - 若点击的是当前待结算通知，将其标记为已点击并立即复位连续未点击计数；
+  /// - 若点击的是尚未补记发送的预调度通知（[deferScoreUntilAccounted] 为 true），
+  ///   持久化该通知 ID 的已点击状态，待补记发送时直接按“已点击”结算，防止随后 `markSent` 覆盖为未点击；
+  /// - 若点击的是此前已按“未点击”结算过的历史通知，修正成功次数与得分并复位连续未点击计数，不重复累加发送总数。
+  Future<void> recordInteraction(
+    String contentType, {
+    int? notificationId,
+    DateTime? sentAt,
+    bool deferScoreUntilAccounted = false,
+  }) {
+    return _withAnalyticsLock(() async {
+      if (notificationId != null && notificationId >= 0) {
+        final targetToken = _buildSentNotificationToken(
+          notificationId,
+          sentAt: sentAt,
+        );
+        if (_findMatchingSettledToken(
+              _settledEngagedIdsKey,
+              notificationId,
+              sentAt: sentAt,
+            ) !=
+            null) {
+          await _setUnengagedStreak(0);
+          AppLogger.d(
+            '记录通知交互: $contentType (ID: $targetToken 已结算过点击，跳过重复计分)',
+          );
+          return;
+        }
 
-    // 待结算记录已被清掉或类型对不上（如冷启动后点击旧通知）：
-    // 至少把连续未点击计数复位 —— 用户明确回应了，不该继续降级。
-    await _setUnengagedStreak(0);
-    await updateContentScore(contentType, true);
-    AppLogger.d('记录通知交互: $contentType（无匹配待结算，直接复位）');
+        final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+        if (pending != null &&
+            (_matchesPendingNotification(
+                  pending,
+                  notificationId,
+                  sentAt: sentAt,
+                ) ||
+                (!deferScoreUntilAccounted &&
+                    pending.notificationId == null &&
+                    pending.contentType == contentType))) {
+          await _consumeClickedToken(notificationId, sentAt: sentAt);
+          final pendingToken = pending.token ?? targetToken;
+          await _mmkv.setString(
+            _pendingSendKey,
+            '${pending.contentType}|1|$pendingToken',
+          );
+          await _setUnengagedStreak(0);
+          AppLogger.d(
+            '记录通知交互: ${pending.contentType} (ID: $pendingToken 已标记待结算为已点击)',
+          );
+          return;
+        }
+
+        final matchedUnengagedToken = _findMatchingSettledToken(
+          _settledUnengagedIdsKey,
+          notificationId,
+          sentAt: sentAt,
+        );
+        if (matchedUnengagedToken != null) {
+          await _removeTrackedString(
+            _settledUnengagedIdsKey,
+            matchedUnengagedToken,
+          );
+          await _appendTrackedString(
+            _settledEngagedIdsKey,
+            sentAt != null ? targetToken : matchedUnengagedToken,
+          );
+          await _setUnengagedStreak(0);
+          await _upgradeUnengagedScoreToEngaged(contentType);
+          AppLogger.d(
+            '记录通知交互: $contentType (ID: $targetToken 修正历史未点击结算为已点击)',
+          );
+          return;
+        }
+
+        if (deferScoreUntilAccounted) {
+          await _appendTrackedString(_clickedNotificationIdsKey, targetToken);
+          await _setUnengagedStreak(0);
+          AppLogger.d(
+            '记录通知交互: $contentType (ID: $targetToken 已保存点击状态，等待补记发送时结算)',
+          );
+          return;
+        }
+
+        await _appendTrackedString(_settledEngagedIdsKey, targetToken);
+        await _setUnengagedStreak(0);
+        await updateContentScore(contentType, true);
+        AppLogger.d('记录通知交互: $contentType (ID: $targetToken 直接结算点击)');
+        return;
+      }
+
+      final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+      if (pending != null && pending.contentType == contentType) {
+        final updatedPending = pending.token != null
+            ? '$contentType|1|${pending.token}'
+            : '$contentType|1';
+        await _mmkv.setString(_pendingSendKey, updatedPending);
+        await _setUnengagedStreak(0);
+        AppLogger.d('记录通知交互: $contentType（已标记待结算为已点击）');
+        return;
+      }
+
+      // 待结算记录已被清掉或类型对不上（如冷启动后点击旧通知）：
+      // 至少把连续未点击计数复位 —— 用户明确回应了，不该继续降级。
+      await _setUnengagedStreak(0);
+      await updateContentScore(contentType, true);
+      AppLogger.d('记录通知交互: $contentType（无匹配待结算，直接复位）');
+    });
   }
 
-  Future<bool> _isInCooldown() async {
+  /// 消费指定通知发送实例在补记发送前已发生的点击标记
+  Future<bool> consumeClickedNotification(
+    int notificationId, {
+    DateTime? sentAt,
+  }) {
+    return _withAnalyticsLock(() async {
+      return _consumeClickedToken(notificationId, sentAt: sentAt);
+    });
+  }
+
+  /// 判断某次通知发送实例是否已完成配额计数登记（防止并发补记中断后重试时重复计数）
+  bool hasRecordedSentNotification(int notificationId, {DateTime? sentAt}) {
+    if (notificationId < 0) return false;
+    final tokens = _getTrackedStringList(_sentNotificationIdsKey);
+    if (tokens.isEmpty) return false;
+    if (sentAt != null) {
+      return tokens.contains(
+        _buildSentNotificationToken(notificationId, sentAt: sentAt),
+      );
+    }
+    return tokens.any(
+      (token) =>
+          token == '$notificationId' || token.startsWith('$notificationId@'),
+    );
+  }
+
+  /// 当同一确定性通知 ID 被重新调度到新的未来时间点时，先结算同 ID 挂起记录，再清理旧实例遗留的点击与结算状态
+  Future<void> resetTrackedNotificationState(
+    int notificationId, {
+    DateTime? sentAt,
+  }) {
+    return _withAnalyticsLock(() async {
+      if (notificationId < 0) return;
+      final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+      if (pending != null &&
+          _matchesPendingNotification(pending, notificationId,
+              sentAt: sentAt)) {
+        await settlePendingSend();
+      }
+      if (sentAt != null) {
+        final token =
+            _buildSentNotificationToken(notificationId, sentAt: sentAt);
+        await _removeTrackedString(_clickedNotificationIdsKey, token);
+        await _removeTrackedString(_settledUnengagedIdsKey, token);
+        await _removeTrackedString(_settledEngagedIdsKey, token);
+        return;
+      }
+      await _removeTrackedByNotificationId(
+        _clickedNotificationIdsKey,
+        notificationId,
+      );
+      await _removeTrackedByNotificationId(
+        _settledUnengagedIdsKey,
+        notificationId,
+      );
+      await _removeTrackedByNotificationId(
+        _settledEngagedIdsKey,
+        notificationId,
+      );
+    });
+  }
+
+  String _buildSentNotificationToken(int notificationId, {DateTime? sentAt}) {
+    if (sentAt != null) {
+      return '$notificationId@${sentAt.millisecondsSinceEpoch}';
+    }
+    return '$notificationId';
+  }
+
+  List<String> _getTrackedStringList(String key) {
+    final raw = _mmkv.getString(key);
+    if (raw == null || raw.isEmpty) return <String>[];
+    final result = <String>[];
+    for (final token in raw.split(',')) {
+      final trimmed = token.trim();
+      if (trimmed.isNotEmpty) {
+        result.add(trimmed);
+      }
+    }
+    return result;
+  }
+
+  Future<void> _saveTrackedStringList(String key, List<String> tokens) async {
+    if (tokens.isEmpty) {
+      await _mmkv.remove(key);
+      return;
+    }
+    await _mmkv.setString(key, tokens.join(','));
+  }
+
+  Future<void> _appendTrackedString(String key, String value) async {
+    final tokens = _getTrackedStringList(key)..remove(value);
+    tokens.add(value);
+    while (tokens.length > _maxTrackedNotificationIds) {
+      tokens.removeAt(0);
+    }
+    await _saveTrackedStringList(key, tokens);
+  }
+
+  Future<void> _removeTrackedString(String key, String value) async {
+    final tokens = _getTrackedStringList(key);
+    if (!tokens.remove(value)) return;
+    await _saveTrackedStringList(key, tokens);
+  }
+
+  Future<void> _removeTrackedByNotificationId(
+    String key,
+    int notificationId,
+  ) async {
+    final exact = '$notificationId';
+    final prefix = '$notificationId@';
+    final tokens = _getTrackedStringList(key);
+    final filtered = tokens
+        .where((t) => t != exact && !t.startsWith(prefix))
+        .toList(growable: false);
+    if (filtered.length == tokens.length) return;
+    await _saveTrackedStringList(key, filtered);
+  }
+
+  String? _findMatchingClickedToken(int notificationId, {DateTime? sentAt}) {
+    if (notificationId < 0) return null;
+    final clicked = _getTrackedStringList(_clickedNotificationIdsKey);
+    if (clicked.isEmpty) return null;
+    final bare = '$notificationId';
+    if (sentAt != null) {
+      final exact = _buildSentNotificationToken(notificationId, sentAt: sentAt);
+      if (clicked.contains(exact)) return exact;
+      if (clicked.contains(bare)) return bare;
+      return null;
+    }
+    if (clicked.contains(bare)) return bare;
+    final prefix = '$notificationId@';
+    for (var i = clicked.length - 1; i >= 0; i--) {
+      if (clicked[i].startsWith(prefix)) {
+        return clicked[i];
+      }
+    }
+    return null;
+  }
+
+  Future<bool> _consumeClickedToken(
+    int notificationId, {
+    DateTime? sentAt,
+  }) async {
+    final matched = _findMatchingClickedToken(notificationId, sentAt: sentAt);
+    if (matched == null) return false;
+    await _removeTrackedString(_clickedNotificationIdsKey, matched);
+    return true;
+  }
+
+  String? _findMatchingSettledToken(
+    String key,
+    int notificationId, {
+    DateTime? sentAt,
+  }) {
+    if (notificationId < 0) return null;
+    final tokens = _getTrackedStringList(key);
+    if (tokens.isEmpty) return null;
+    if (sentAt != null) {
+      final exact = _buildSentNotificationToken(notificationId, sentAt: sentAt);
+      return tokens.contains(exact) ? exact : null;
+    }
+    final bare = '$notificationId';
+    if (tokens.contains(bare)) return bare;
+    final prefix = '$notificationId@';
+    for (var i = tokens.length - 1; i >= 0; i--) {
+      if (tokens[i].startsWith(prefix)) {
+        return tokens[i];
+      }
+    }
+    return null;
+  }
+
+  bool _matchesPendingNotification(
+    ({
+      String contentType,
+      bool engaged,
+      int? notificationId,
+      DateTime? sentAt,
+      String? token,
+    }) pending,
+    int notificationId, {
+    DateTime? sentAt,
+  }) {
+    if (pending.notificationId != notificationId) return false;
+    if (sentAt != null && pending.sentAt != null) {
+      return pending.sentAt!.millisecondsSinceEpoch ==
+          sentAt.millisecondsSinceEpoch;
+    }
+    return true;
+  }
+
+  ({
+    String contentType,
+    bool engaged,
+    int? notificationId,
+    DateTime? sentAt,
+    String? token,
+  })? _parsePendingSend(
+    String? raw,
+  ) {
+    if (raw == null || raw.isEmpty) return null;
+    final parts = raw.split('|');
+    if (parts.length != 2 && parts.length != 3) return null;
+    final contentType = parts[0];
+    if (contentType.isEmpty) return null;
+    final engaged = parts[1] == '1';
+    int? notificationId;
+    DateTime? sentAt;
+    String? token;
+    if (parts.length == 3) {
+      final rawToken = parts[2].trim();
+      final atIndex = rawToken.indexOf('@');
+      if (atIndex > 0) {
+        final parsedId = int.tryParse(rawToken.substring(0, atIndex));
+        final parsedEpoch = int.tryParse(rawToken.substring(atIndex + 1));
+        if (parsedId != null && parsedId >= 0 && parsedEpoch != null) {
+          notificationId = parsedId;
+          sentAt = DateTime.fromMillisecondsSinceEpoch(parsedEpoch);
+          token = '$parsedId@$parsedEpoch';
+        }
+      } else {
+        final parsedId = int.tryParse(rawToken);
+        if (parsedId != null && parsedId >= 0) {
+          notificationId = parsedId;
+          token = '$parsedId';
+        }
+      }
+    }
+    return (
+      contentType: contentType,
+      engaged: engaged,
+      notificationId: notificationId,
+      sentAt: sentAt,
+      token: token,
+    );
+  }
+
+  Future<void> _upgradeUnengagedScoreToEngaged(String contentType) async {
+    final scores = await _getContentScores();
+    final metrics = await _getNotificationMetrics();
+    final totalKey = '${contentType}_total';
+    final successKey = '${contentType}_success';
+
+    final currentTotal = metrics[totalKey] ?? 0;
+    final currentSuccess = metrics[successKey] ?? 0;
+    final total = currentTotal > 0 ? currentTotal : 1;
+    final success = min(total, currentSuccess + 1);
+
+    metrics[totalKey] = total;
+    metrics[successKey] = success;
+    await _saveNotificationMetrics(metrics);
+
+    final newScore = (success + 1) / (total + 2);
+    scores[contentType] = newScore;
+    await _saveContentScores(scores);
+  }
+
+  /// 获取手动忽略通知后的冷却结束时间（未处于忽略记录中时返回 null）
+  DateTime? getDismissalCooldownEnd() {
     try {
       final lastDismissal = _mmkv.getString(_lastDismissalKey);
-      if (lastDismissal == null || lastDismissal.isEmpty) return false;
+      if (lastDismissal == null || lastDismissal.isEmpty) return null;
 
       final dismissTime = DateTime.parse(lastDismissal);
-      final cooldownEnd = dismissTime.add(
-        Duration(hours: cooldownHoursAfterDismiss),
+      return dismissTime.add(
+        const Duration(hours: cooldownHoursAfterDismiss),
       );
-
-      return DateTime.now().isBefore(cooldownEnd);
     } catch (e, stack) {
       AppLogger.e(
         '解析忽略时间记录失败',
@@ -357,8 +770,14 @@ class SmartPushAnalytics extends ChangeNotifier {
         stackTrace: stack,
         source: 'SmartPushAnalytics',
       );
-      return false;
+      return null;
     }
+  }
+
+  Future<bool> _isInCooldown({DateTime? now}) async {
+    final cooldownEnd = getDismissalCooldownEnd();
+    if (cooldownEnd == null) return false;
+    return (now ?? DateTime.now()).isBefore(cooldownEnd);
   }
 
   // ============================================================
@@ -369,73 +788,133 @@ class SmartPushAnalytics extends ChangeNotifier {
   // ============================================================
 
   /// 最近一次打开 App 的时间
-  Future<DateTime?> getLastAppOpen() async {
-    final records = await _getAppOpenRecords();
-    for (int i = records.length - 1; i >= 0; i--) {
-      final dt = DateTime.tryParse(records[i]);
-      if (dt != null) return dt;
-    }
-    return null;
+  Future<DateTime?> getLastAppOpen() {
+    return _withAnalyticsLock(() async {
+      final records = await _getAppOpenRecords();
+      for (int i = records.length - 1; i >= 0; i--) {
+        final dt = DateTime.tryParse(records[i]);
+        if (dt != null) return dt;
+      }
+      return null;
+    });
   }
 
   /// 按最近 [engagementWindowDays] 天打开 App 的**天数**分档
   ///
   /// 用天数而不是次数：一天疯狂开 20 次的人和连开 4 天的人，
   /// 后者才是真的把它当日常，前者可能只是在找某条笔记。
-  Future<EngagementTier> getEngagementTier() async {
-    final records = await _getAppOpenRecords();
-    final now = DateTime.now();
-    final cutoff = now.subtract(const Duration(days: engagementWindowDays));
+  Future<EngagementTier> getEngagementTier({DateTime? now}) {
+    return _withAnalyticsLock(() async {
+      final records = await _getAppOpenRecords();
+      final currentNow = now ?? DateTime.now();
+      final cutoff = currentNow.subtract(
+        const Duration(days: engagementWindowDays),
+      );
 
-    final openDays = <String>{};
-    for (final record in records) {
-      final dt = DateTime.tryParse(record);
-      if (dt == null || dt.isBefore(cutoff)) continue;
-      openDays.add(dt.toIso8601String().substring(0, 10));
-    }
+      final openDays = <String>{};
+      for (final record in records) {
+        final dt = DateTime.tryParse(record);
+        if (dt == null || dt.isBefore(cutoff) || dt.isAfter(currentNow)) {
+          continue;
+        }
+        final dayPart = (record.length >= 10 &&
+                record.codeUnitAt(4) == 0x2D &&
+                record.codeUnitAt(7) == 0x2D)
+            ? record.substring(0, 10)
+            : dt.toIso8601String().substring(0, 10);
+        openDays.add(dayPart);
+      }
 
-    if (openDays.length >= activeOpenDaysThreshold) {
-      return EngagementTier.active;
-    }
-    if (openDays.isNotEmpty) return EngagementTier.light;
-    return EngagementTier.dormant;
+      if (openDays.length >= activeOpenDaysThreshold) {
+        return EngagementTier.active;
+      }
+      if (openDays.isNotEmpty) return EngagementTier.light;
+      return EngagementTier.dormant;
+    });
   }
 
   /// 连续未点击次数
-  Future<int> getUnengagedStreak() async {
-    final raw = _mmkv.getString(_unengagedStreakKey);
-    if (raw == null || raw.isEmpty) return 0;
-    return int.tryParse(raw) ?? 0;
+  Future<int> getUnengagedStreak() {
+    return _withAnalyticsLock(() async {
+      final raw = _mmkv.getString(_unengagedStreakKey);
+      if (raw == null || raw.isEmpty) return 0;
+      return int.tryParse(raw) ?? 0;
+    });
   }
 
   Future<void> _setUnengagedStreak(int value) async {
     await _mmkv.setString(_unengagedStreakKey, value.toString());
   }
 
-  /// 当前连续未点击次数对应的冷却时长
-  Future<Duration> getHabituationCooldown() async {
-    final streak = await getUnengagedStreak();
-    final index = streak.clamp(0, habituationCooldownHours.length - 1);
+  /// 根据连续未点击次数计算对应的冷却时长
+  static Duration cooldownForStreak(int streak) {
+    final safeStreak = streak < 0 ? 0 : streak;
+    final index = safeStreak.clamp(0, habituationCooldownHours.length - 1);
     return Duration(hours: habituationCooldownHours[index]);
   }
 
-  /// 今日已推送条数
-  Future<int> getTodayPushCount() async {
-    final raw = _mmkv.getString(_dailyCountKey);
-    if (raw == null || raw.isEmpty) return 0;
-
-    final parts = raw.split('|');
-    if (parts.length != 2) return 0;
-
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    if (parts[0] != today) return 0; // 跨天自动归零
-
-    return int.tryParse(parts[1]) ?? 0;
+  /// 非消费式检查某条通知实例是否已被用户点击（不清除点击标记）
+  bool hasClickedNotification(int notificationId, {DateTime? sentAt}) {
+    return _findMatchingClickedToken(notificationId, sentAt: sentAt) != null;
   }
 
-  Future<void> _incrementTodayPushCount() async {
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    final count = await getTodayPushCount();
+  /// 当前连续未点击次数对应的冷却时长
+  Future<Duration> getHabituationCooldown() async {
+    final streak = await getUnengagedStreak();
+    return cooldownForStreak(streak);
+  }
+
+  /// 预测下一次推送发出前结算挂起记录后的连续未点击次数（纯只读：不消费点击记录、不重复落盘）
+  Future<int> getProjectedUnengagedStreak() {
+    return _withAnalyticsLock(() async {
+      final settledStreak = await getUnengagedStreak();
+      final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+      if (pending == null) return settledStreak;
+
+      final isPendingEngaged = pending.engaged ||
+          (pending.notificationId != null &&
+              hasClickedNotification(
+                pending.notificationId!,
+                sentAt: pending.sentAt,
+              ));
+      if (isPendingEngaged) {
+        return 0;
+      }
+      return settledStreak + 1;
+    });
+  }
+
+  /// 预测未来槽位判定时的连续未点击冷却时长（计入尚未结算的上一条已送达提醒）
+  Future<Duration> getProjectedHabituationCooldown({
+    int additionalUnengaged = 0,
+  }) {
+    return _withAnalyticsLock(() async {
+      final projectedStreak =
+          await getProjectedUnengagedStreak() + additionalUnengaged;
+      return cooldownForStreak(projectedStreak);
+    });
+  }
+
+  /// 今日已推送条数
+  Future<int> getTodayPushCount({DateTime? now}) {
+    return _withAnalyticsLock(() async {
+      final raw = _mmkv.getString(_dailyCountKey);
+      if (raw == null || raw.isEmpty) return 0;
+
+      final parts = raw.split('|');
+      if (parts.length != 2) return 0;
+
+      final today = (now ?? DateTime.now()).toIso8601String().substring(0, 10);
+      if (parts[0] != today) return 0; // 跨天自动归零
+
+      return int.tryParse(parts[1]) ?? 0;
+    });
+  }
+
+  Future<void> _incrementTodayPushCount({DateTime? now}) async {
+    final currentNow = now ?? DateTime.now();
+    final today = currentNow.toIso8601String().substring(0, 10);
+    final count = await getTodayPushCount(now: currentNow);
     await _mmkv.setString(_dailyCountKey, '$today|${count + 1}');
   }
 
@@ -445,37 +924,231 @@ class SmartPushAnalytics extends ChangeNotifier {
   /// 老代码在发送瞬间就 `updateContentScore(type, false)` 记一次失败，
   /// 点击时又只加 `_success` 计数不重算分数，导致所有内容分单调趋近 0、
   /// Thompson Sampling 退化成纯随机 —— 这里把闭环接回来。
-  Future<void> settlePendingSend() async {
-    final raw = _mmkv.getString(_pendingSendKey);
-    if (raw == null || raw.isEmpty) return;
+  Future<void> settlePendingSend() {
+    return _withAnalyticsLock(() async {
+      final raw = _mmkv.getString(_pendingSendKey);
+      if (raw == null || raw.isEmpty) return;
 
-    final parts = raw.split('|');
-    if (parts.length != 2) {
+      final pending = _parsePendingSend(raw);
+      if (pending == null) {
+        await _mmkv.setString(_pendingSendKey, '');
+        return;
+      }
+
+      final contentType = pending.contentType;
+      final notificationId = pending.notificationId;
+      final pendingToken = pending.token ??
+          (notificationId != null
+              ? _buildSentNotificationToken(
+                  notificationId,
+                  sentAt: pending.sentAt,
+                )
+              : null);
+      var engaged = pending.engaged;
+      if (!engaged && notificationId != null) {
+        engaged = await _consumeClickedToken(
+          notificationId,
+          sentAt: pending.sentAt,
+        );
+      }
+
+      await updateContentScore(contentType, engaged);
+
+      if (engaged) {
+        if (pendingToken != null) {
+          await _appendTrackedString(_settledEngagedIdsKey, pendingToken);
+        }
+        await _setUnengagedStreak(0);
+        AppLogger.d('结算上一条推送: $contentType 已点击，连续未点击计数复位');
+      } else {
+        if (pendingToken != null) {
+          await _appendTrackedString(_settledUnengagedIdsKey, pendingToken);
+        }
+        final streak = await getUnengagedStreak();
+        await _setUnengagedStreak(streak + 1);
+        AppLogger.d('结算上一条推送: $contentType 未点击，连续未点击 ${streak + 1} 次');
+      }
+
       await _mmkv.setString(_pendingSendKey, '');
-      return;
-    }
-
-    final contentType = parts[0];
-    final engaged = parts[1] == '1';
-
-    await updateContentScore(contentType, engaged);
-
-    if (engaged) {
-      await _setUnengagedStreak(0);
-      AppLogger.d('结算上一条推送: $contentType 已点击，连续未点击计数复位');
-    } else {
-      final streak = await getUnengagedStreak();
-      await _setUnengagedStreak(streak + 1);
-      AppLogger.d('结算上一条推送: $contentType 未点击，连续未点击 ${streak + 1} 次');
-    }
-
-    await _mmkv.setString(_pendingSendKey, '');
+    });
   }
 
-  /// 登记一条刚发出的推送（等待下次结算）
-  Future<void> markSent(String contentType) async {
-    await _mmkv.setString(_pendingSendKey, '$contentType|0');
-    await _incrementTodayPushCount();
+  /// 跨 Isolate 原子执行预调度通知送达补记：
+  /// 在同一互斥临界区内刷新最新共享存储、校验发送令牌、结算挂起项、消费预点击记录并登记发送，
+  /// 确保后台补记与前台点击结算不会相互覆盖。
+  Future<void> recordDeliveredNotification(
+    String contentType, {
+    required int notificationId,
+    DateTime? sentAt,
+    bool alreadyEngaged = false,
+  }) {
+    return _withAnalyticsLock(() async {
+      final alreadyRecorded = hasRecordedSentNotification(
+        notificationId,
+        sentAt: sentAt,
+      );
+      if (!alreadyRecorded) {
+        await settlePendingSend();
+      }
+      final wasClicked =
+          await _consumeClickedToken(notificationId, sentAt: sentAt);
+      await markSent(
+        contentType,
+        sentAt: sentAt,
+        notificationId: notificationId,
+        alreadyEngaged: alreadyEngaged || wasClicked,
+      );
+    });
+  }
+
+  /// 登记一条刚发出的推送（等待下次结算；若补记前已被用户点击则立即按已点击结算）
+  Future<void> markSent(
+    String contentType, {
+    DateTime? sentAt,
+    int? notificationId,
+    bool alreadyEngaged = false,
+  }) {
+    return _withAnalyticsLock(() async {
+      final sentToken = (notificationId != null && notificationId >= 0)
+          ? _buildSentNotificationToken(notificationId, sentAt: sentAt)
+          : null;
+      if (notificationId != null &&
+          hasRecordedSentNotification(notificationId, sentAt: sentAt)) {
+        final engagedOnRetry = alreadyEngaged ||
+            await _consumeClickedToken(notificationId, sentAt: sentAt);
+        if (engagedOnRetry) {
+          final pending = _parsePendingSend(_mmkv.getString(_pendingSendKey));
+          if (pending != null &&
+              _matchesPendingNotification(
+                pending,
+                notificationId,
+                sentAt: sentAt,
+              )) {
+            if (!pending.engaged) {
+              final pendingToken = pending.token ?? sentToken!;
+              await _mmkv.setString(
+                _pendingSendKey,
+                '${pending.contentType}|1|$pendingToken',
+              );
+            }
+            await _setUnengagedStreak(0);
+          } else {
+            final matchedUnengaged = _findMatchingSettledToken(
+              _settledUnengagedIdsKey,
+              notificationId,
+              sentAt: sentAt,
+            );
+            if (matchedUnengaged != null) {
+              await _removeTrackedString(
+                _settledUnengagedIdsKey,
+                matchedUnengaged,
+              );
+              await _appendTrackedString(
+                _settledEngagedIdsKey,
+                sentToken ?? matchedUnengaged,
+              );
+              await _setUnengagedStreak(0);
+              await _upgradeUnengagedScoreToEngaged(contentType);
+            } else if (_findMatchingSettledToken(
+                  _settledEngagedIdsKey,
+                  notificationId,
+                  sentAt: sentAt,
+                ) ==
+                null) {
+              await updateContentScore(contentType, true);
+              if (sentToken != null) {
+                await _appendTrackedString(_settledEngagedIdsKey, sentToken);
+              }
+              await _setUnengagedStreak(0);
+            }
+          }
+        }
+        return;
+      }
+
+      final hadPriorTokenForSameId = notificationId != null &&
+          notificationId >= 0 &&
+          hasRecordedSentNotification(notificationId);
+      final currentPending =
+          _parsePendingSend(_mmkv.getString(_pendingSendKey));
+      final matchedSettledEngagedForCurrent =
+          (notificationId != null && notificationId >= 0)
+              ? (sentAt != null
+                  ? (_getTrackedStringList(_settledEngagedIdsKey)
+                          .contains(sentToken)
+                      ? sentToken
+                      : null)
+                  : (!hadPriorTokenForSameId
+                      ? _findMatchingSettledToken(
+                          _settledEngagedIdsKey,
+                          notificationId,
+                        )
+                      : null))
+              : null;
+      final alreadyPendingEngagedCurrentInstance = notificationId != null &&
+          notificationId >= 0 &&
+          currentPending != null &&
+          currentPending.engaged &&
+          (sentAt != null
+              ? currentPending.token == sentToken
+              : (!hadPriorTokenForSameId &&
+                  currentPending.notificationId == notificationId));
+
+      await _incrementTodayPushCount(now: sentAt);
+      if (sentToken != null) {
+        await _appendTrackedString(_sentNotificationIdsKey, sentToken);
+      }
+
+      var engaged = alreadyEngaged ||
+          matchedSettledEngagedForCurrent != null ||
+          alreadyPendingEngagedCurrentInstance;
+      if (!engaged && notificationId != null) {
+        engaged = await _consumeClickedToken(notificationId, sentAt: sentAt);
+      }
+
+      if (engaged) {
+        if (sentToken != null) {
+          final staleUnengaged = _findMatchingSettledToken(
+            _settledUnengagedIdsKey,
+            notificationId!,
+            sentAt: sentAt,
+          );
+          if (staleUnengaged != null) {
+            await _removeTrackedString(_settledUnengagedIdsKey, staleUnengaged);
+          }
+          if (!_getTrackedStringList(_settledEngagedIdsKey)
+              .contains(sentToken)) {
+            if (matchedSettledEngagedForCurrent == null) {
+              await updateContentScore(contentType, true);
+            }
+            await _appendTrackedString(_settledEngagedIdsKey, sentToken);
+          }
+        } else {
+          await updateContentScore(contentType, true);
+        }
+        await _setUnengagedStreak(0);
+        if (currentPending == null ||
+            currentPending.notificationId == null ||
+            (notificationId != null &&
+                _matchesPendingNotification(
+                  currentPending,
+                  notificationId,
+                  sentAt: sentAt,
+                ))) {
+          await _mmkv.setString(_pendingSendKey, '');
+        }
+        return;
+      }
+
+      if (sentToken != null) {
+        await _removeTrackedString(_settledUnengagedIdsKey, sentToken);
+        await _removeTrackedString(_settledEngagedIdsKey, sentToken);
+      }
+
+      final pendingValue =
+          sentToken != null ? '$contentType|0|$sentToken' : '$contentType|0';
+      await _mmkv.setString(_pendingSendKey, pendingValue);
+    });
   }
 
   /// 裁定这次推送能不能发，以及要多好才配发。
@@ -484,66 +1157,70 @@ class SmartPushAnalytics extends ChangeNotifier {
   Future<PushAllowance> checkPushAllowance({
     required PushIntensity intensity,
     DateTime? lastPushTime,
-  }) async {
-    final tier = await getEngagementTier();
-    final profile = intensity.quotaFor(tier);
-    final todayCount = await getTodayPushCount();
+    DateTime? now,
+  }) {
+    return _withAnalyticsLock(() async {
+      final currentNow = now ?? DateTime.now();
+      final tier = await getEngagementTier(now: currentNow);
+      final profile = intensity.quotaFor(tier);
+      final todayCount = await getTodayPushCount(now: currentNow);
 
-    PushAllowance deny(String reason) => PushAllowance(
-          allowed: false,
-          reason: reason,
-          tier: tier,
-          profile: profile,
-          todayCount: todayCount,
-        );
+      PushAllowance deny(String reason) => PushAllowance(
+            allowed: false,
+            reason: reason,
+            tier: tier,
+            profile: profile,
+            todayCount: todayCount,
+          );
 
-    // 1. 今日配额
-    if (todayCount >= profile.dailyCap) {
-      return deny(
-        '今日配额已用尽 (${tier.name}/${intensity.name}: $todayCount/${profile.dailyCap})',
-      );
-    }
-
-    // 2. 最小间隔天数（沉睡档靠这个把节奏拉到 3 天/周/更长）
-    if (profile.minGapDays > 0 && lastPushTime != null) {
-      final gap = DateTime.now().difference(lastPushTime).inDays;
-      if (gap < profile.minGapDays) {
-        return deny('未到最小间隔 ($gap 天 < ${profile.minGapDays} 天)');
-      }
-    }
-
-    // 3. 连续未点击衰减
-    final habituation = await getHabituationCooldown();
-    if (habituation > Duration.zero && lastPushTime != null) {
-      final since = DateTime.now().difference(lastPushTime);
-      if (since < habituation) {
-        final streak = await getUnengagedStreak();
+      // 1. 今日配额
+      if (todayCount >= profile.dailyCap) {
         return deny(
-          '连续 $streak 次未点击，冷却中 (${habituation.inHours}h，已过 ${since.inHours}h)',
+          '今日配额已用尽 (${tier.name}/${intensity.name}: $todayCount/${profile.dailyCap})',
         );
       }
-    }
 
-    // 4. 刚打开过 App —— 他已经想起来了
-    final lastOpen = await getLastAppOpen();
-    if (lastOpen != null) {
-      final sinceOpen = DateTime.now().difference(lastOpen);
-      if (sinceOpen < const Duration(hours: recentOpenSuppressHours)) {
-        return deny('${sinceOpen.inMinutes} 分钟前刚用过 App，跳过本次推送');
+      // 2. 最小间隔天数（沉睡档靠这个把节奏拉到 3 天/周/更长）
+      if (profile.minGapDays > 0 && lastPushTime != null) {
+        final gap = currentNow.difference(lastPushTime).inDays;
+        if (gap < profile.minGapDays) {
+          return deny('未到最小间隔 ($gap 天 < ${profile.minGapDays} 天)');
+        }
       }
-    }
 
-    // 5. 被手动忽略后的冷却
-    if (await _isInCooldown()) {
-      return deny('用户处于忽略冷却期');
-    }
+      // 3. 连续未点击衰减
+      final habituation = await getHabituationCooldown();
+      if (habituation > Duration.zero && lastPushTime != null) {
+        final since = currentNow.difference(lastPushTime);
+        if (since < habituation) {
+          final streak = await getUnengagedStreak();
+          return deny(
+            '连续 $streak 次未点击，冷却中 (${habituation.inHours}h，已过 ${since.inHours}h)',
+          );
+        }
+      }
 
-    return PushAllowance(
-      allowed: true,
-      tier: tier,
-      profile: profile,
-      todayCount: todayCount,
-    );
+      // 4. 刚打开过 App —— 他已经想起来了
+      final lastOpen = await getLastAppOpen();
+      if (lastOpen != null && !currentNow.isBefore(lastOpen)) {
+        final sinceOpen = currentNow.difference(lastOpen);
+        if (sinceOpen < const Duration(hours: recentOpenSuppressHours)) {
+          return deny('${sinceOpen.inMinutes} 分钟前刚用过 App，跳过本次推送');
+        }
+      }
+
+      // 5. 被手动忽略后的冷却
+      if (await _isInCooldown(now: currentNow)) {
+        return deny('用户处于忽略冷却期');
+      }
+
+      return PushAllowance(
+        allowed: true,
+        tier: tier,
+        profile: profile,
+        todayCount: todayCount,
+      );
+    });
   }
 
   // ============================================================
@@ -553,63 +1230,67 @@ class SmartPushAnalytics extends ChangeNotifier {
   /// 使用 Thompson Sampling 选择最佳内容类型
   ///
   /// 实现 ε-Greedy 策略的探索-利用平衡
-  Future<String> selectContentType(List<String> availableTypes) async {
-    if (availableTypes.isEmpty) return 'dailyQuote';
-    if (availableTypes.length == 1) return availableTypes.first;
+  Future<String> selectContentType(List<String> availableTypes) {
+    return _withAnalyticsLock(() async {
+      if (availableTypes.isEmpty) return 'dailyQuote';
+      if (availableTypes.length == 1) return availableTypes.first;
 
-    // ε-Greedy: 10% 概率探索（随机选择）
-    if (_random.nextDouble() < explorationRate) {
-      final selected = availableTypes[_random.nextInt(availableTypes.length)];
-      AppLogger.d('Thompson Sampling 探索: $selected');
-      return selected;
-    }
-
-    // 90% 概率利用（选择历史最佳）
-    final scores = await _getContentScores();
-
-    String bestType = availableTypes.first;
-    double bestScore = -1;
-
-    for (final type in availableTypes) {
-      final score = scores[type] ?? 0.5; // 默认得分 0.5
-
-      // 添加少量随机噪声避免总是选择同一个
-      final adjustedScore = score + (_random.nextDouble() * 0.1);
-
-      if (adjustedScore > bestScore) {
-        bestScore = adjustedScore;
-        bestType = type;
+      // ε-Greedy: 10% 概率探索（随机选择）
+      if (_random.nextDouble() < explorationRate) {
+        final selected = availableTypes[_random.nextInt(availableTypes.length)];
+        AppLogger.d('Thompson Sampling 探索: $selected');
+        return selected;
       }
-    }
 
-    AppLogger.d('Thompson Sampling 利用: $bestType (score: $bestScore)');
-    return bestType;
+      // 90% 概率利用（选择历史最佳）
+      final scores = await _getContentScores();
+
+      String bestType = availableTypes.first;
+      double bestScore = -1;
+
+      for (final type in availableTypes) {
+        final score = scores[type] ?? 0.5; // 默认得分 0.5
+
+        // 添加少量随机噪声避免总是选择同一个
+        final adjustedScore = score + (_random.nextDouble() * 0.1);
+
+        if (adjustedScore > bestScore) {
+          bestScore = adjustedScore;
+          bestType = type;
+        }
+      }
+
+      AppLogger.d('Thompson Sampling 利用: $bestType (score: $bestScore)');
+      return bestType;
+    });
   }
 
   /// 更新内容类型得分（基于用户反馈）
-  Future<void> updateContentScore(String contentType, bool wasEngaged) async {
-    final scores = await _getContentScores();
-    final metrics = await _getNotificationMetrics();
+  Future<void> updateContentScore(String contentType, bool wasEngaged) {
+    return _withAnalyticsLock(() async {
+      final scores = await _getContentScores();
+      final metrics = await _getNotificationMetrics();
 
-    // 获取该类型的历史数据
-    final totalKey = '${contentType}_total';
-    final successKey = '${contentType}_success';
+      // 获取该类型的历史数据
+      final totalKey = '${contentType}_total';
+      final successKey = '${contentType}_success';
 
-    final total = (metrics[totalKey] ?? 0) + 1;
-    final success = (metrics[successKey] ?? 0) + (wasEngaged ? 1 : 0);
+      final total = (metrics[totalKey] ?? 0) + 1;
+      final success = (metrics[successKey] ?? 0) + (wasEngaged ? 1 : 0);
 
-    // 更新计数
-    metrics[totalKey] = total;
-    metrics[successKey] = success;
-    await _saveNotificationMetrics(metrics);
+      // 更新计数
+      metrics[totalKey] = total;
+      metrics[successKey] = success;
+      await _saveNotificationMetrics(metrics);
 
-    // 计算新得分（使用贝叶斯估计的平滑）
-    // Beta(success + 1, total - success + 1) 的均值
-    final newScore = (success + 1) / (total + 2);
-    scores[contentType] = newScore;
-    await _saveContentScores(scores);
+      // 计算新得分（使用贝叶斯估计的平滑）
+      // Beta(success + 1, total - success + 1) 的均值
+      final newScore = (success + 1) / (total + 2);
+      scores[contentType] = newScore;
+      await _saveContentScores(scores);
 
-    AppLogger.d('更新内容得分: $contentType = $newScore ($success/$total)');
+      AppLogger.d('更新内容得分: $contentType = $newScore ($success/$total)');
+    });
   }
 
   Future<Map<String, double>> _getContentScores() async {
@@ -689,45 +1370,53 @@ class SmartPushAnalytics extends ChangeNotifier {
   // ============================================================
 
   /// 获取推送效果统计
-  Future<Map<String, dynamic>> getAnalyticsStats() async {
-    final metrics = await _getNotificationMetrics();
-    final scores = await _getContentScores();
-    final optimalWindows = await getOptimalPushWindows();
+  Future<Map<String, dynamic>> getAnalyticsStats() {
+    return _withAnalyticsLock(() async {
+      final metrics = await _getNotificationMetrics();
+      final scores = await _getContentScores();
+      final optimalWindows = await getOptimalPushWindows();
 
-    // 计算整体点击率
-    int totalSent = 0;
-    int totalEngaged = 0;
-    for (final type in _trackedContentTypes) {
-      totalSent += metrics['${type}_total'] ?? 0;
-      totalEngaged += metrics['${type}_success'] ?? 0;
-    }
+      // 计算整体点击率
+      int totalSent = 0;
+      int totalEngaged = 0;
+      for (final type in _trackedContentTypes) {
+        totalSent += metrics['${type}_total'] ?? 0;
+        totalEngaged += metrics['${type}_success'] ?? 0;
+      }
 
-    final overallCtr = totalSent > 0 ? totalEngaged / totalSent : 0.0;
+      final overallCtr = totalSent > 0 ? totalEngaged / totalSent : 0.0;
 
-    return {
-      'totalNotificationsSent': totalSent,
-      'totalEngagements': totalEngaged,
-      'overallClickRate': (overallCtr * 100).toStringAsFixed(1),
-      'contentTypeScores': scores,
-      'optimalHours': optimalWindows.map((e) => e.key).toList(),
-      'engagementTier': (await getEngagementTier()).name,
-      'todayPushCount': await getTodayPushCount(),
-      'unengagedStreak': await getUnengagedStreak(),
-      'habituationCooldownHours': (await getHabituationCooldown()).inHours,
-      'isInCooldown': await _isInCooldown(),
-    };
+      return {
+        'totalNotificationsSent': totalSent,
+        'totalEngagements': totalEngaged,
+        'overallClickRate': (overallCtr * 100).toStringAsFixed(1),
+        'contentTypeScores': scores,
+        'optimalHours': optimalWindows.map((e) => e.key).toList(),
+        'engagementTier': (await getEngagementTier()).name,
+        'todayPushCount': await getTodayPushCount(),
+        'unengagedStreak': await getUnengagedStreak(),
+        'habituationCooldownHours': (await getHabituationCooldown()).inHours,
+        'isInCooldown': await _isInCooldown(),
+      };
+    });
   }
 
   /// 重置所有分析数据
   Future<void> resetAnalytics() async {
-    await _mmkv.remove(_appOpenTimesKey);
-    await _mmkv.remove(_notificationMetricsKey);
-    await _mmkv.remove(_contentScoresKey);
-    await _mmkv.remove(_unengagedStreakKey);
-    await _mmkv.remove(_pendingSendKey);
-    await _mmkv.remove(_dailyCountKey);
-    await _mmkv.remove(_lastDismissalKey);
-    AppLogger.i('智能推送分析数据已重置');
+    await _withAnalyticsLock(() async {
+      await _mmkv.remove(_appOpenTimesKey);
+      await _mmkv.remove(_notificationMetricsKey);
+      await _mmkv.remove(_contentScoresKey);
+      await _mmkv.remove(_unengagedStreakKey);
+      await _mmkv.remove(_pendingSendKey);
+      await _mmkv.remove(_dailyCountKey);
+      await _mmkv.remove(_lastDismissalKey);
+      await _mmkv.remove(_clickedNotificationIdsKey);
+      await _mmkv.remove(_settledUnengagedIdsKey);
+      await _mmkv.remove(_settledEngagedIdsKey);
+      await _mmkv.remove(_sentNotificationIdsKey);
+      AppLogger.i('智能推送分析数据已重置');
+    });
     notifyListeners();
   }
 }

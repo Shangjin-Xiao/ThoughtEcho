@@ -2324,21 +2324,38 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       if (!mounted) return;
 
                                       if (result != null && result == true) {
-                                        // 如果笔记已在全屏编辑器中保存，关闭本对话框
-                                        // 性能优化：延迟 300ms 等待全屏编辑器的退出动画执行完毕，避免动画冲突导致视觉上的中断
+                                        // 如果笔记已在全屏编辑器中保存，关闭本对话框；
+                                        // 若全屏编辑器通过 pushReplacement 进入了 Thoughter 等后续页面
+                                        // （此时本弹窗不再是栈顶路由），直接移除本弹窗路由，避免从后续页面返回时重新露出旧表单。
                                         if (mounted && context.mounted) {
-                                          Future.delayed(
-                                              const Duration(milliseconds: 300),
-                                              () {
-                                            if (mounted && context.mounted) {
-                                              final route =
-                                                  ModalRoute.of(context);
-                                              if (route != null &&
-                                                  route.isCurrent) {
-                                                Navigator.pop(context);
-                                              }
+                                          final currentRoute =
+                                              ModalRoute.of(context);
+                                          if (currentRoute != null &&
+                                              !currentRoute.isCurrent) {
+                                            if (currentRoute.isActive) {
+                                              Navigator.of(context)
+                                                  .removeRoute(currentRoute);
                                             }
-                                          });
+                                          } else {
+                                            // 性能优化：延迟 300ms 等待全屏编辑器的退出动画执行完毕，避免动画冲突导致视觉上的中断
+                                            Future.delayed(
+                                                const Duration(
+                                                    milliseconds: 300), () {
+                                              if (mounted && context.mounted) {
+                                                final route =
+                                                    ModalRoute.of(context);
+                                                if (route != null &&
+                                                    route.isActive) {
+                                                  if (route.isCurrent) {
+                                                    Navigator.pop(context);
+                                                  } else {
+                                                    Navigator.of(context)
+                                                        .removeRoute(route);
+                                                  }
+                                                }
+                                              }
+                                            });
+                                          }
                                         }
                                       }
                                     } catch (e) {
