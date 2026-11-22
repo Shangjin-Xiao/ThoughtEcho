@@ -100,6 +100,9 @@ class _PaginationCoordinatorState {
   StreamController<List<Quote>>? deliveredQuotesController;
   List<Quote> lastDeliveredQuotes = const <Quote>[];
   bool lastDeliveredHasMore = true;
+  bool isRefillInProgress = false;
+  List<Quote> refillBaselineQuotes = const <Quote>[];
+  bool refillBaselineHasMore = true;
   StreamController<List<Quote>>? deferredRefreshController;
   AppLifecycleState? Function()? debugLifecycleStateProvider;
   void Function(String stage)? debugQueryStageObserver;
@@ -116,6 +119,23 @@ class _PaginationCoordinatorState {
       !controller.isClosed &&
       identical(deliveredQuotesController, controller);
 
+  void beginRefill({
+    required List<Quote> quotes,
+    required bool hasMore,
+  }) {
+    if (!isRefillInProgress) {
+      isRefillInProgress = true;
+      refillBaselineQuotes = List<Quote>.unmodifiable(quotes);
+      refillBaselineHasMore = hasMore;
+    }
+  }
+
+  void endRefill() {
+    isRefillInProgress = false;
+    refillBaselineQuotes = const <Quote>[];
+    refillBaselineHasMore = true;
+  }
+
   void markDelivered(
     StreamController<List<Quote>>? controller, {
     required List<Quote> quotes,
@@ -127,9 +147,11 @@ class _PaginationCoordinatorState {
       lastDeliveredQuotes = List<Quote>.unmodifiable(quotes);
       lastDeliveredHasMore = hasMore;
     }
-    if (clearDeferredRefresh &&
-        identical(deferredRefreshController, controller)) {
-      deferredRefreshController = null;
+    if (clearDeferredRefresh) {
+      endRefill();
+      if (identical(deferredRefreshController, controller)) {
+        deferredRefreshController = null;
+      }
     }
   }
 
@@ -154,6 +176,7 @@ class _PaginationCoordinatorState {
     deliveredQuotesController = null;
     lastDeliveredQuotes = const <Quote>[];
     lastDeliveredHasMore = true;
+    endRefill();
     deferredRefreshController = null;
   }
 
@@ -162,6 +185,7 @@ class _PaginationCoordinatorState {
     deliveredQuotesController = null;
     lastDeliveredQuotes = const <Quote>[];
     lastDeliveredHasMore = true;
+    endRefill();
     deferredRefreshController = null;
     dataMutationEpoch++;
   }

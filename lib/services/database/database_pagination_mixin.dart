@@ -106,6 +106,9 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
           logFailureAtBoundary: false,
         );
       } on _QueryCancelledException {
+        if (generation == _quotesLoadGeneration) {
+          _coordinatorState.endRefill();
+        }
         return;
       } catch (e, stackTrace) {
         failed = true;
@@ -156,6 +159,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
             suspendedInBackground && targetCount > _currentQuotes.length
                 ? targetCount
                 : 0;
+        _coordinatorState.endRefill();
         return;
       }
 
@@ -166,11 +170,22 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       _watchOffset = 0;
       _watchHasMore = previousHasMore;
       _pendingRefillTarget = suspendedInBackground ? targetCount : 0;
+      _coordinatorState.endRefill();
       if (_quotesController != null && !_quotesController!.isClosed) {
         _quotesController!.addError(error, stackTrace);
       }
       return;
     }
+
+    final bool hadDeliveredSnapshot =
+        _coordinatorState.hasDeliveredForController(_quotesController);
+    final bool lastEmittedHasMore = hadDeliveredSnapshot
+        ? _coordinatorState.lastDeliveredHasMore
+        : previousHasMore;
+    final bool skipStreamEmit =
+        _quoteListsEquivalent(previousQuotes, _currentQuotes) &&
+            _watchHasMore == previousHasMore &&
+            _watchHasMore == lastEmittedHasMore;
 
     _pendingRefillTarget = 0;
     _coordinatorState.markDelivered(
@@ -180,8 +195,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       clearDeferredRefresh: true,
     );
 
-    if (_quoteListsEquivalent(previousQuotes, _currentQuotes)) {
-      logDebug('刷新后可见列表无变化，跳过整表推送');
+    if (skipStreamEmit) {
+      logDebug('刷新后可见列表与分页状态均无变化，跳过整表推送');
       return;
     }
 
@@ -223,22 +238,43 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       // 滚动位置被夹紧 —— 表现就是「列表突然飞走/弹回顶部 + 底部转圈 + 大片空白」。
       // 所以刷新必须一次把原有页数全部取回，列表长度保持不变。
       //
-      // 上一次刷新可能还在回填途中（那时 _currentQuotes 已被清空），
-      // 此时必须从协调器保存的最近一次已投递快照恢复基线列表、分页游标与回填深度，
-      // 避免连续两次后台同步刷新（如导入入库后紧跟同步状态刷新）把回滚基线冲成空列表。
+      // 上一次刷新可能还在分块回填途中（那时 _currentQuotes 要么已被清空，要么仅装有尚未投递的部分分块），
+      // 此时必须始终以本轮连续刷新开始前已投递的完整基线为准，绝不能拿未投递的半程分块覆盖回滚基线。
       final bool hasCommittedSnapshot =
           _coordinatorState.hasDeliveredForController(_quotesController);
-      final List<Quote> previousQuotes = _currentQuotes.isNotEmpty
-          ? List<Quote>.from(_currentQuotes)
-          : (hasCommittedSnapshot
-              ? List<Quote>.from(_coordinatorState.lastDeliveredQuotes)
-              : <Quote>[]);
-      final bool previousHasMore = _currentQuotes.isNotEmpty
-          ? _watchHasMore
-          : (hasCommittedSnapshot
-              ? _coordinatorState.lastDeliveredHasMore
-              : _watchHasMore);
-      int loadedCount = _currentQuotes.length;
+      final bool wasRefillInProgress = _coordinatorState.isRefillInProgress;
+      late final List<Quote> previousQuotes;
+      late final bool previousHasMore;
+      if (wasRefillInProgress) {
+        previousQuotes = List<Quote>.from(
+          _coordinatorState.refillBaselineQuotes,
+        );
+        previousHasMore = _coordinatorState.refillBaselineHasMore;
+      } else if (_currentQuotes.isNotEmpty) {
+        previousQuotes = List<Quote>.from(_currentQuotes);
+        previousHasMore = _watchHasMore;
+        _coordinatorState.beginRefill(
+          quotes: previousQuotes,
+          hasMore: previousHasMore,
+        );
+      } else if (hasCommittedSnapshot) {
+        previousQuotes = List<Quote>.from(
+          _coordinatorState.lastDeliveredQuotes,
+        );
+        previousHasMore = _coordinatorState.lastDeliveredHasMore;
+        _coordinatorState.beginRefill(
+          quotes: previousQuotes,
+          hasMore: previousHasMore,
+        );
+      } else {
+        previousQuotes = <Quote>[];
+        previousHasMore = _watchHasMore;
+        _coordinatorState.beginRefill(
+          quotes: const <Quote>[],
+          hasMore: previousHasMore,
+        );
+      }
+      int loadedCount = wasRefillInProgress ? 0 : _currentQuotes.length;
       if (_pendingRefillTarget > loadedCount) {
         loadedCount = _pendingRefillTarget;
       }

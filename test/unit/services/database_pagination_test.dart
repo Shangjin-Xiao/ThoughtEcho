@@ -396,6 +396,59 @@ void main() {
         );
       },
     );
+
+    test(
+      '分块回填中途再次刷新并失败时，回滚基线保持为最近已投递完整列表而非未发布的半程分块',
+      () async {
+        // 先加载 500 条并继续翻页至 580 条（已投递快照为 580 条 rev0）。
+        final events = <List<Quote>>[];
+        final sub = service.watchQuotes(limit: 80).listen(events.add);
+        addTearDown(sub.cancel);
+        await _waitForEvent(events, (quotes) => quotes.length, equals(80));
+        while (events.last.length < 560) {
+          await service.loadMoreQuotes();
+          await _drainEventLoop();
+        }
+        final committedCount = events.last.length;
+        expect(committedCount, greaterThan(500));
+
+        // 第 1 次刷新静默取回前 500 条（rev1），在请求第 2 块（offset=500）时挂起。
+        final secondChunkEntered = Completer<void>();
+        final secondChunkGate = Completer<void>();
+        service.contentRevision = 1;
+        service.onBeforePage = (offset, limit) async {
+          if (offset == 500 && !secondChunkEntered.isCompleted) {
+            secondChunkEntered.complete();
+            await secondChunkGate.future;
+          }
+        };
+
+        service.refreshQuotes();
+        await secondChunkEntered.future;
+
+        // 此时 _currentQuotes 中仅有未发布的 500 条 rev1；触发第 2 次刷新并令其失败。
+        service.onBeforePage = null;
+        service.failQueriesWith = StateError('前台替换刷新失败');
+        service.refreshQuotes();
+        secondChunkGate.complete();
+        await _drainEventLoop();
+
+        // 恢复正常后继续向后翻页：必须从原已投递长度续取，绝不能退化成 500 条半程分块。
+        service.failQueriesWith = null;
+        await service.loadMoreQuotes();
+        await _waitForEvent(
+          events,
+          (quotes) => quotes.length,
+          greaterThan(committedCount),
+        );
+        expect(
+          events.last.first.content,
+          contains('rev0'),
+          reason: '未发布的 rev1 半程分块不得污染失败回滚基线',
+        );
+        expect(events.last.length, 600);
+      },
+    );
   });
 
   group('Database pagination single-flight, timeout & error contracts', () {
@@ -750,6 +803,56 @@ void main() {
           ]),
         );
         expect(events.last, hasLength(6));
+        expect(service.hasMoreQuotes, isTrue);
+
+        // 继续翻到底耗尽全部 7 条，验证后台双次刷新期间合入“更早的尾部笔记”时：
+        // 即便可见前 7 条未变，恢复刷新也必须重新推送事件以打开 hasMore，使更早笔记可继续翻出。
+        await service.loadMoreQuotes();
+        await _waitForEvent(events, (q) => q.length, equals(7));
+        await service.loadMoreQuotes();
+        await _drainEventLoop();
+        expect(service.hasMoreQuotes, isFalse);
+        final eventsBeforeOlderSync = events.length;
+
+        lifecycle = AppLifecycleState.paused;
+        await rawDb.insert('quotes', {
+          'id': 'bg-sync-older',
+          'content': '排在已触底列表之后的更早同步笔记',
+          'date': DateTime(2026, 6, 1, 8).toIso8601String(),
+          'weather': 'rainy',
+          'day_period': 'morning',
+          'last_modified': '2026-06-01T08:00:00.000Z',
+        });
+        service.refreshQuotes();
+        service.refreshQuotes();
+        await _drainEventLoop();
+        expect(service.hasMoreQuotes, isFalse);
+
+        lifecycle = AppLifecycleState.resumed;
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isTrue,
+        );
+        service.refreshQuotes();
+        await _waitForEvent(
+          events,
+          (q) => q.length,
+          equals(7),
+          startIndex: eventsBeforeOlderSync,
+        );
+        expect(
+          service.hasMoreQuotes,
+          isTrue,
+          reason: '尾部新增更早笔记使分页游标从触底变为可继续加载时，必须推送流事件通知列表重新打开翻页',
+        );
+
+        await service.loadMoreQuotes();
+        await _waitForEvent(
+          events,
+          (q) => q.last.id,
+          equals('bg-sync-older'),
+        );
+        expect(events.last, hasLength(8));
       },
     );
 
@@ -1553,6 +1656,7 @@ class _PagedDatabaseService extends DatabaseService {
   /// 令查询在返回前抛出异常，用于验证回填失败时的保护。
   /// 一经设置，**此后所有**查询都会失败，直到调用方把它置回 null。
   Object? failQueriesWith;
+  Future<void> Function(int offset, int limit)? onBeforePage;
 
   @override
   Future<List<Quote>> getUserQuotes({
@@ -1570,6 +1674,10 @@ class _PagedDatabaseService extends DatabaseService {
     bool includeDeleted = false,
   }) async {
     requestedPages.add((offset: offset, limit: limit));
+    final hook = onBeforePage;
+    if (hook != null) {
+      await hook(offset, limit);
+    }
     final failure = failQueriesWith;
     if (failure != null) {
       completedQueries++;

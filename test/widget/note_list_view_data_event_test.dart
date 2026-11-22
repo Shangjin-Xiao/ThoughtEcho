@@ -406,6 +406,20 @@ void main() {
           databaseService,
           () => lifecycle,
         );
+        Future<void>? preResumeLoadMore;
+        var triggerLoadMoreOnNextResume = false;
+        final preResumeObserver = _PreResumeCallbackObserver(
+          onResumed: () {
+            if (triggerLoadMoreOnNextResume) {
+              triggerLoadMoreOnNextResume = false;
+              preResumeLoadMore = databaseService.loadMoreQuotes();
+            }
+          },
+        );
+        // 在 NoteListView 挂载前注册观察者，使同一次 handleAppLifecycleStateChanged(resumed)
+        // 先触发在途翻页请求、紧接着进入 NoteListViewState.didChangeAppLifecycleState，生命周期全程一致。
+        tester.binding.addObserver(preResumeObserver);
+        addTearDown(() => tester.binding.removeObserver(preResumeObserver));
         final settingsService = _FakeSettingsService();
 
         await tester.pumpWidget(
@@ -482,25 +496,23 @@ void main() {
 
         final inFlightGate = Completer<void>();
         databaseService.queryGate = inFlightGate;
+        triggerLoadMoreOnNextResume = true;
         lifecycle = AppLifecycleState.hidden;
         tester.binding.handleAppLifecycleStateChanged(lifecycle);
         lifecycle = AppLifecycleState.inactive;
         tester.binding.handleAppLifecycleStateChanged(lifecycle);
         lifecycle = AppLifecycleState.resumed;
-        final manualLoadMore = databaseService.loadMoreQuotes();
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
         await tester.pump();
+        expect(preResumeLoadMore, isNotNull);
         expect(
           DatabaseService.isPaginationQueryInFlight(databaseService),
           isTrue,
         );
 
-        // 此时触发 resumed：由于 isPaginationQueryInFlight 为 true，延迟刷新标记被保留而非丢失。
-        tester.binding.handleAppLifecycleStateChanged(lifecycle);
-        await tester.pump();
-
         databaseService.queryGate = null;
         inFlightGate.complete();
-        await manualLoadMore;
+        await preResumeLoadMore;
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
 
@@ -927,6 +939,19 @@ class _LifecycleAwareRealPaginationDbService extends DatabaseService {
     if (offset >= quotes.length) return const [];
     final end = (offset + limit).clamp(0, quotes.length);
     return List<Quote>.from(quotes.sublist(offset, end));
+  }
+}
+
+class _PreResumeCallbackObserver with WidgetsBindingObserver {
+  _PreResumeCallbackObserver({required this.onResumed});
+
+  final VoidCallback onResumed;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResumed();
+    }
   }
 }
 
