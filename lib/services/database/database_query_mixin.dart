@@ -15,6 +15,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     required String? dateStart,
     required String? dateEnd,
     required bool includeDeleted,
+    required bool enforceForegroundLifecycle,
   }) {
     final normalizedTags = tagIds == null || tagIds.isEmpty
         ? const <String>[]
@@ -49,7 +50,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         '|dp:${normalizedDayPeriods.join(",")}'
         '|hide:$shouldExcludeHidden'
         '|ds:$normalizedDateStart|de:$normalizedDateEnd'
-        '|del:$includeDeleted';
+        '|del:$includeDeleted'
+        '|fg:$enforceForegroundLifecycle';
   }
 
   Future<List<Quote>> _coalesceInFlightQuoteQuery({
@@ -107,6 +109,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     String? dateEnd,
     bool includeDeleted = false,
     bool Function()? isCancelled,
+    bool enforceForegroundLifecycle = false,
   }) async {
     // 修复：确保数据库已完全初始化
     if (!_isInitialized) {
@@ -261,16 +264,19 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           dateEnd: dateEnd,
           includeDeleted: includeDeleted,
           shouldAbortAttempt: shouldAbortAttempt,
+          enforceForegroundLifecycle: enforceForegroundLifecycle,
         );
       },
       isCancelled: isCancelled,
+      enforceForegroundLifecycle: enforceForegroundLifecycle,
     );
   }
 
   /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选。
   ///
-  /// - 外部公开调用方（备份、媒体引用扫描、统计、AI 工具等）遇到底层异常时记录单次终端错误日志并降级返回 `[]`；
-  /// - 分页/回填内部通道通过 [_paginationThrowingQueryZoneKey] 调用时，向上透传原始 `(error, stackTrace)`，绝不吞错。
+  /// - 外部公开调用方（备份、媒体引用扫描、统计、AI 工具等）不启用前台生命周期门控，
+  ///   即使导出/巡检期间应用切换焦点也能完整读取 SQLite，仅在真实底层异常时记录单次错误日志并降级返回 `[]`；
+  /// - 分页/回填内部通道通过 [_paginationThrowingQueryZoneKey] 调用时启用前台生命周期门控并向上透传原始 `(error, stackTrace)`。
   @override
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
@@ -303,6 +309,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         dateEnd: dateEnd,
         includeDeleted: includeDeleted,
         isCancelled: paginationContext.isCancelled,
+        enforceForegroundLifecycle:
+            paginationContext.enforceForegroundLifecycle,
       );
     }
 
@@ -319,6 +327,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       dateStart: dateStart,
       dateEnd: dateEnd,
       includeDeleted: includeDeleted,
+      enforceForegroundLifecycle: false,
     );
 
     try {
@@ -339,6 +348,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           dateEnd: dateEnd,
           includeDeleted: includeDeleted,
           isCancelled: () => _isDisposed || flight.areAllWaitersCancelled,
+          enforceForegroundLifecycle: false,
         ),
       );
     } on _QueryCancelledException {
@@ -360,6 +370,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     int maxRetries = 2,
     Duration? timeout,
     bool Function()? isCancelled,
+    bool enforceForegroundLifecycle = false,
   }) async {
     final actualTimeout = timeout ?? _getOptimalTimeout();
 
@@ -367,7 +378,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       if (_isDisposed || (isCancelled?.call() ?? false)) {
         throw const _QueryCancelledException('cancelled_before_attempt');
       }
-      if (!_isAppLifecycleActive()) {
+      if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
         Error.throwWithStackTrace(
           TimeoutException('数据库查询在后台态已暂停', actualTimeout),
           StackTrace.current,
@@ -379,7 +390,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           attemptAborted ||
           _isDisposed ||
           (isCancelled?.call() ?? false) ||
-          !_isAppLifecycleActive();
+          (enforceForegroundLifecycle && !_isAppLifecycleActive());
 
       try {
         final completer = Completer<T>();
@@ -425,7 +436,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           rethrow;
         }
 
-        if (!_isAppLifecycleActive()) {
+        if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
           logDebug('应用处于非活跃生命周期状态，中止数据库超时重试');
           rethrow;
         }
@@ -439,7 +450,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         if (_isDisposed || (isCancelled?.call() ?? false)) {
           throw const _QueryCancelledException('cancelled_after_backoff');
         }
-        if (!_isAppLifecycleActive()) {
+        if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
           logDebug('重试等待期间应用进入非活跃生命周期状态，中止重试');
           rethrow;
         }
@@ -468,9 +479,10 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     String? dateEnd,
     bool includeDeleted = false,
     bool Function()? shouldAbortAttempt,
+    bool enforceForegroundLifecycle = false,
   }) async {
     if (shouldAbortAttempt != null && shouldAbortAttempt()) {
-      if (!_isAppLifecycleActive()) {
+      if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
         Error.throwWithStackTrace(
           TimeoutException('数据库查询在后台态已中止'),
           StackTrace.current,
@@ -651,7 +663,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     _updateQueryStats('getUserQuotes', queryTime);
 
     if (shouldAbortAttempt != null && shouldAbortAttempt()) {
-      if (!_isAppLifecycleActive()) {
+      if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
         Error.throwWithStackTrace(
           TimeoutException('数据库标签批查在后台态已中止'),
           StackTrace.current,
@@ -697,7 +709,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     final allTagMaps = await batch.commit();
 
     if (shouldAbortAttempt != null && shouldAbortAttempt()) {
-      if (!_isAppLifecycleActive()) {
+      if (enforceForegroundLifecycle && !_isAppLifecycleActive()) {
         Error.throwWithStackTrace(
           TimeoutException('数据库反序列化在后台态已中止'),
           StackTrace.current,

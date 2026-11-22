@@ -71,9 +71,13 @@ class _InFlightQuoteQuery {
 }
 
 class _PaginationQueryZoneContext {
-  const _PaginationQueryZoneContext({required this.isCancelled});
+  const _PaginationQueryZoneContext({
+    required this.isCancelled,
+    this.enforceForegroundLifecycle = true,
+  });
 
   final bool Function() isCancelled;
+  final bool enforceForegroundLifecycle;
 }
 
 class _QueryCancelledException implements Exception {
@@ -89,11 +93,51 @@ class _PaginationCoordinatorState {
   final Map<String, _InFlightQuoteQuery> inFlightQuoteQueries =
       <String, _InFlightQuoteQuery>{};
   int dataMutationEpoch = 0;
+  StreamController<List<Quote>>? deliveredQuotesController;
+  StreamController<List<Quote>>? deferredRefreshController;
   AppLifecycleState? Function()? debugLifecycleStateProvider;
   void Function(String stage)? debugQueryStageObserver;
 
+  bool hasDeliveredForController(StreamController<List<Quote>>? controller) =>
+      controller != null &&
+      !controller.isClosed &&
+      identical(deliveredQuotesController, controller);
+
+  void markDelivered(StreamController<List<Quote>>? controller) {
+    if (controller != null && !controller.isClosed) {
+      deliveredQuotesController = controller;
+    }
+    if (identical(deferredRefreshController, controller)) {
+      deferredRefreshController = null;
+    }
+  }
+
+  void markDeferredRefresh(StreamController<List<Quote>>? controller) {
+    if (controller != null && !controller.isClosed) {
+      deferredRefreshController = controller;
+    }
+  }
+
+  bool consumeDeferredRefresh(StreamController<List<Quote>>? controller) {
+    if (controller != null &&
+        !controller.isClosed &&
+        identical(deferredRefreshController, controller)) {
+      deferredRefreshController = null;
+      return true;
+    }
+    deferredRefreshController = null;
+    return false;
+  }
+
+  void resetForNewWatchController() {
+    deliveredQuotesController = null;
+    deferredRefreshController = null;
+  }
+
   void reset() {
     inFlightQuoteQueries.clear();
+    deliveredQuotesController = null;
+    deferredRefreshController = null;
     dataMutationEpoch++;
   }
 }
@@ -1414,6 +1458,16 @@ class DatabaseService extends _DatabaseServiceBase
       return false;
     }
     return service._isLoading || coordinator.inFlightQuoteQueries.isNotEmpty;
+  }
+
+  /// 消费挂起于当前活跃监听流上的后台延迟刷新标记。
+  /// 若恢复前筛选条件已切换（控制器已更替或关闭），旧标记会自动失效并返回 false。
+  static bool consumeDeferredPaginationRefresh(DatabaseService service) {
+    final coordinator = _paginationCoordinatorExpando[service];
+    if (coordinator == null) {
+      return false;
+    }
+    return coordinator.consumeDeferredRefresh(service._quotesController);
   }
 
   @visibleForTesting

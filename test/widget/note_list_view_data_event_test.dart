@@ -393,6 +393,79 @@ void main() {
     );
 
     testWidgets(
+      '首屏已加载后在非活跃态触发同步刷新：后台保持旧列表，切回 resumed 自动补跑刷新展示新内容',
+      (tester) async {
+        var lifecycle = AppLifecycleState.resumed;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+
+        final databaseService = _LifecycleAwareRealPaginationDbService(
+          initialQuotes: _makeQuotes(2),
+          readLifecycle: () => lifecycle,
+        );
+        DatabaseService.setDebugLifecycleStateProvider(
+          databaseService,
+          () => lifecycle,
+        );
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+        expect(find.text('后台同步合入的新笔记'), findsNothing);
+
+        // 应用切入 inactive / paused 后，模拟 WebDAV 同步合并完成并调用 refreshQuotes()。
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.paused;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+
+        databaseService.quotes = [
+          Quote(
+            id: 'synced-quote',
+            content: '后台同步合入的新笔记',
+            date: DateTime(2026, 8, 18, 9).toIso8601String(),
+          ),
+          ..._makeQuotes(2),
+        ];
+        databaseService.refreshQuotes();
+        await tester.pump();
+
+        // 后台期间旧列表保持可见且不闪现错误视图。
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+        expect(find.text('后台同步合入的新笔记'), findsNothing);
+        expect(find.byType(AppErrorView), findsNothing);
+
+        // 回到前台 resumed：NoteListView 自动消费挂起的延迟刷新并渲染同步后的新笔记。
+        lifecycle = AppLifecycleState.hidden;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.inactive;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        lifecycle = AppLifecycleState.resumed;
+        tester.binding.handleAppLifecycleStateChanged(lifecycle);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('后台同步合入的新笔记'), findsOneWidget);
+        expect(find.text('数据事件测试笔记 0'), findsOneWidget);
+
+        DatabaseService.setDebugLifecycleStateProvider(databaseService, null);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        databaseService.dispose();
+      },
+    );
+
+    testWidgets(
       '前台连续超时自动恢复最多 2 次后收敛到 AppErrorView，点击重试恢复加载',
       (tester) async {
         tester.binding.handleAppLifecycleStateChanged(
@@ -758,6 +831,50 @@ class _StreamingFakeDatabaseService extends DatabaseService {
   }
 
   Future<void> disposeStream() => _controller.close();
+}
+
+/// 复用真实 [_DatabasePaginationMixin] 分页与延迟刷新状态机的轻量测试服务。
+class _LifecycleAwareRealPaginationDbService extends DatabaseService {
+  _LifecycleAwareRealPaginationDbService({
+    required List<Quote> initialQuotes,
+    required this.readLifecycle,
+  })  : quotes = List<Quote>.from(initialQuotes),
+        super.forTesting();
+
+  List<Quote> quotes;
+  final AppLifecycleState Function() readLifecycle;
+
+  @override
+  bool get isInitialized => true;
+
+  @override
+  Future<List<NoteTag>> getTags() async => const [];
+
+  @override
+  Future<List<Quote>> getUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 10,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
+    bool includeDeleted = false,
+  }) async {
+    if (readLifecycle() != AppLifecycleState.resumed) {
+      Error.throwWithStackTrace(
+        TimeoutException('数据库查询在后台态已暂停'),
+        StackTrace.current,
+      );
+    }
+    if (offset >= quotes.length) return const [];
+    final end = (offset + limit).clamp(0, quotes.length);
+    return List<Quote>.from(quotes.sublist(offset, end));
+  }
 }
 
 class _WidgetRecordingLogService implements UnifiedLogService {

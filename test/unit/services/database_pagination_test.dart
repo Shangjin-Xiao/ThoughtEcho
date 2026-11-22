@@ -621,20 +621,29 @@ void main() {
         expect(_ids(results[0]), _ids(results[1]));
         expect(results[0], isNotEmpty);
 
-        // 真实数据写入推进 mutationEpoch：在飞读请求与写后新读请求必须隔离。
-        final preWriteGate = Completer<void>();
-        var blockOnce = true;
-        proxyDb.quotesQueryCount = 0;
+        // 真实数据写入推进 mutationEpoch：让写前读请求先读出旧 SQL 行并卡在标签批查阶段，
+        // 随后执行真实写入并发起新读请求，验证旧快照不包含新写入数据而新读请求包含新数据。
+        final preWriteTagGate = Completer<void>();
+        final sqlReadDone = Completer<void>();
+        var interceptOnce = true;
         proxyDb.onQueryQuotes = (proceed) async {
-          if (blockOnce) {
-            blockOnce = false;
-            await preWriteGate.future;
+          final rows = await proceed();
+          if (interceptOnce && !sqlReadDone.isCompleted) {
+            sqlReadDone.complete();
+          }
+          return rows;
+        };
+        proxyDb.onCommitBatch = (proceed) async {
+          if (interceptOnce) {
+            interceptOnce = false;
+            await preWriteTagGate.future;
           }
           return proceed();
         };
+        proxyDb.quotesQueryCount = 0;
 
         final staleReadFuture = service.getUserQuotes(offset: 0, limit: 20);
-        await _drainEventLoop();
+        await sqlReadDone.future;
         expect(proxyDb.quotesQueryCount, 1);
 
         await service.addQuote(
@@ -646,16 +655,172 @@ void main() {
         );
 
         final freshReadFuture = service.getUserQuotes(offset: 0, limit: 20);
-        preWriteGate.complete();
+        preWriteTagGate.complete();
 
+        final staleQuotes = await staleReadFuture;
         final freshQuotes = await freshReadFuture;
-        await staleReadFuture;
+        proxyDb.onQueryQuotes = null;
+        proxyDb.onCommitBatch = null;
         expect(
           proxyDb.quotesQueryCount,
           2,
           reason: '写入推进纪元后，新的分页读取不得复用写前已发出的在飞查询',
         );
+        expect(
+          _ids(staleQuotes),
+          isNot(contains('fresh-quote')),
+          reason: '写前已读出的在途快照不应混入写后新记录',
+        );
         expect(_ids(freshQuotes), contains('fresh-quote'));
+      },
+    );
+
+    test(
+      '公开 getUserQuotes 在非活跃生命周期下不截断数据，且与分页生命周期门控航班隔离',
+      () async {
+        await seedQuotes(5, tagIds: const ['t1']);
+        var lifecycle = AppLifecycleState.resumed;
+        DatabaseService.setDebugLifecycleStateProvider(
+          service,
+          () => lifecycle,
+        );
+
+        // 模拟导出备份或媒体孤儿清理期间用户切换应用（进入 inactive / paused）。
+        lifecycle = AppLifecycleState.inactive;
+        final pageWhileInactive = await service.getUserQuotes(
+          offset: 0,
+          limit: 50,
+          excludeHiddenNotes: false,
+          includeDeleted: true,
+        );
+        expect(_ids(pageWhileInactive), hasLength(5));
+
+        lifecycle = AppLifecycleState.paused;
+        final secondPageCheck = await service.getUserQuotes(
+          offset: 0,
+          limit: 3,
+        );
+        expect(
+          _ids(secondPageCheck),
+          equals(['seed-0', 'seed-1', 'seed-2']),
+          reason:
+              '非分页公开 getUserQuotes 在后台生命周期下必须完整读取 SQLite，绝不能返回伪空列表截断备份或误删附件',
+        );
+
+        // 进一步验证：UI 分页查询（前台门控）与公开 getUserQuotes（非门控）同参数并发时不共享在途航班。
+        lifecycle = AppLifecycleState.resumed;
+        final gate = Completer<void>();
+        proxyDb.quotesQueryCount = 0;
+        proxyDb.onQueryQuotes = (proceed) async {
+          await gate.future;
+          return proceed();
+        };
+
+        final watchErrors = <Object>[];
+        final sub = service.watchQuotes(limit: 3).listen(
+              (_) {},
+              onError: (Object e, StackTrace _) => watchErrors.add(e),
+            );
+        addTearDown(sub.cancel);
+        final exportFuture = service.getUserQuotes(offset: 0, limit: 3);
+
+        await _drainEventLoop();
+        expect(
+          proxyDb.quotesQueryCount,
+          2,
+          reason: '带生命周期门控的 UI 分页航班与无门控的公开查询航班必须隔离',
+        );
+
+        // 切入后台后放行 SQL：UI 分页在标签批查前中止，而公开 getUserQuotes 仍完整返回 3 条数据。
+        lifecycle = AppLifecycleState.paused;
+        gate.complete();
+
+        final exportedQuotes = await exportFuture;
+        await _drainEventLoop();
+        expect(_ids(exportedQuotes), equals(['seed-0', 'seed-1', 'seed-2']));
+        expect(watchErrors, isNotEmpty);
+        proxyDb.onQueryQuotes = null;
+      },
+    );
+
+    test(
+      '已加载列表在后台同步触发 refreshQuotes 时保留可见旧列表并标记待刷新，回到前台后补跑且筛选切换可作废旧标记',
+      () async {
+        await seedQuotes(2);
+        var lifecycle = AppLifecycleState.resumed;
+        DatabaseService.setDebugLifecycleStateProvider(
+          service,
+          () => lifecycle,
+        );
+
+        final events = <List<Quote>>[];
+        final errors = <Object>[];
+        final sub = service.watchQuotes(limit: 2).listen(
+              events.add,
+              onError: (Object e, StackTrace _) => errors.add(e),
+            );
+        addTearDown(sub.cancel);
+
+        await _waitForEvent(events, _ids, equals(['seed-0', 'seed-1']));
+        final eventCountBeforeBgSync = events.length;
+
+        // 模拟应用处于 inactive 时 WebDAV 合并入库新笔记并调用 refreshQuotes()。
+        lifecycle = AppLifecycleState.inactive;
+        await rawDb.insert('quotes', {
+          'id': 'webdav-merged',
+          'content': '后台 WebDAV 合并的新笔记',
+          'date': DateTime(2026, 8, 2, 10).toIso8601String(),
+          'weather': 'sunny',
+          'day_period': 'morning',
+          'last_modified': '2026-08-02T10:00:00.000Z',
+        });
+        service.refreshQuotes();
+        await _drainEventLoop();
+
+        // 后台期间回填被生命周期门控挂起：旧列表不塌缩、不报 error 日志，但记录了待刷新标记。
+        expect(events.length, eventCountBeforeBgSync);
+        expect(errors, isEmpty);
+        expect(
+          logService.records.where((r) => r['level'] == UnifiedLogLevel.error),
+          isEmpty,
+        );
+
+        // 回到前台 resumed 后消费待刷新标记并补跑 refreshQuotes，新合并的笔记立即可见。
+        lifecycle = AppLifecycleState.resumed;
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isTrue,
+        );
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isFalse,
+          reason: '待刷新标记消费一次后即清零，避免重复刷新',
+        );
+        service.refreshQuotes();
+        await _waitForEvent(
+          events,
+          _ids,
+          equals(['webdav-merged', 'seed-0']),
+        );
+
+        // 若后台再次挂起刷新，但在消费前切换了筛选条件（新建流控制器），旧控制器的挂起标记自动失效。
+        lifecycle = AppLifecycleState.paused;
+        service.refreshQuotes();
+        await _drainEventLoop();
+
+        lifecycle = AppLifecycleState.resumed;
+        final filteredEvents = <List<Quote>>[];
+        final filteredSub = service
+            .watchQuotes(limit: 10, searchQuery: '后台 WebDAV')
+            .listen(filteredEvents.add);
+        addTearDown(filteredSub.cancel);
+
+        expect(
+          DatabaseService.consumeDeferredPaginationRefresh(service),
+          isFalse,
+          reason: '筛选切换已重建流并启动新查询，旧控制器的延迟刷新标记必须自动作废',
+        );
+        await _waitForEvent(filteredEvents, _ids, equals(['webdav-merged']));
       },
     );
 

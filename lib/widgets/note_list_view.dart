@@ -958,9 +958,9 @@ class NoteListViewState extends State<NoteListView>
     }
 
     _isLifecycleActive = true;
+    final db = _databaseService;
     if (!_initialDataLoaded && _initialLoadSuspendedByLifecycle) {
       _initialLoadSuspendedByLifecycle = false;
-      final db = _databaseService;
       if (!_waitingForServices && db != null && db.isInitialized) {
         if (_initialLoadErrorMessage != null || !_isLoading) {
           _updateState(() {
@@ -968,6 +968,7 @@ class NoteListViewState extends State<NoteListView>
             _isLoading = true;
           });
         }
+        DatabaseService.consumeDeferredPaginationRefresh(db);
         if (!DatabaseService.isPaginationQueryInFlight(db)) {
           logDebug(
             '应用回到前台 resumed 且首屏尚未就绪，触发单次干净恢复拉取',
@@ -977,6 +978,17 @@ class NoteListViewState extends State<NoteListView>
         }
         _scheduleInitialLoadSafetyTimer();
       }
+    } else if (_initialDataLoaded &&
+        !_waitingForServices &&
+        db != null &&
+        db.isInitialized &&
+        DatabaseService.consumeDeferredPaginationRefresh(db) &&
+        !DatabaseService.isPaginationQueryInFlight(db)) {
+      logDebug(
+        '应用回到前台 resumed，补跑后台挂起的列表刷新',
+        source: 'NoteListView',
+      );
+      db.refreshQuotes();
     }
 
     // 后台例行 trim 现在只把 imageCache **淘汰**到一个小额度而不是清空

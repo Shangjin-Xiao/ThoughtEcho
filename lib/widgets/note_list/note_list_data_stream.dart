@@ -376,10 +376,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           _initialLoadSafetyTimer?.cancel();
           _initialLoadSafetyTimer = null;
 
-          if (!_isLifecycleActive &&
-              !_initialDataLoaded &&
-              error is TimeoutException) {
-            _initialLoadSuspendedByLifecycle = true;
+          if (!_isLifecycleActive && error is TimeoutException) {
+            if (!_initialDataLoaded) {
+              _initialLoadSuspendedByLifecycle = true;
+            }
+            _setSearchUpdating(false);
             return;
           }
 
@@ -769,10 +770,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           _initialLoadSafetyTimer?.cancel();
           _initialLoadSafetyTimer = null;
 
-          if (!_isLifecycleActive &&
-              !_initialDataLoaded &&
-              error is TimeoutException) {
-            _initialLoadSuspendedByLifecycle = true;
+          if (!_isLifecycleActive && error is TimeoutException) {
+            if (!_initialDataLoaded) {
+              _initialLoadSuspendedByLifecycle = true;
+            }
+            _setSearchUpdating(false);
             return;
           }
 

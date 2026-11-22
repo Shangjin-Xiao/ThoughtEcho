@@ -32,6 +32,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       dateStart: null,
       dateEnd: null,
       includeDeleted: includeDeleted,
+      enforceForegroundLifecycle: true,
     );
 
     return _coalesceInFlightQuoteQuery(
@@ -52,6 +53,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
         zoneValues: <Object?, Object?>{
           _paginationThrowingQueryZoneKey: _PaginationQueryZoneContext(
             isCancelled: () => _isDisposed || flight.areAllWaitersCancelled,
+            enforceForegroundLifecycle: true,
           ),
         },
       ),
@@ -131,9 +133,12 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
         );
       } else {
         logDebug('后台生命周期下刷新回填已挂起: $error');
+        _coordinatorState.markDeferredRefresh(_quotesController);
       }
 
-      if (previousQuotes.isNotEmpty) {
+      if (previousQuotes.isNotEmpty ||
+          (suspendedInBackground &&
+              _coordinatorState.hasDeliveredForController(_quotesController))) {
         logDebug(
           '刷新回填未取满（${_currentQuotes.length}/${previousQuotes.length}），'
           '回滚到刷新前的状态以免列表塌缩',
@@ -164,6 +169,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     }
 
     _pendingRefillTarget = 0;
+    _coordinatorState.markDelivered(_quotesController);
 
     if (_quoteListsEquivalent(previousQuotes, _currentQuotes)) {
       logDebug('刷新后可见列表无变化，跳过整表推送');
@@ -182,6 +188,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     if (_isDisposed) return;
 
     if (_quotesController != null && !_quotesController!.isClosed) {
+      _coordinatorState.markDelivered(_quotesController);
       // 直接发送当前列表的副本，已保证唯一性
       _quotesController!.add(List.from(_currentQuotes));
     }
@@ -209,8 +216,9 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
       final int loadedCount = _currentQuotes.isNotEmpty
           ? _currentQuotes.length
           : _pendingRefillTarget;
-      // 列表本来就是空的（首屏前的刷新）：照旧取一页。
-      final int reloadCount = loadedCount > 0 ? loadedCount : _watchLimit;
+      // 列表本来不足一页（如首屏前或总笔记数少于一页时新增/同步合入）：至少取满一页容量。
+      final int reloadCount =
+          loadedCount > _watchLimit ? loadedCount : _watchLimit;
       _pendingRefillTarget = reloadCount;
       // 回填结果和刷新前一模一样时不再向 UI 推送：整表推送会让列表页
       // 重建全部已加载 item（上百次 build + 首次布局），发生在滚动帧里
@@ -257,7 +265,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
     bool includeDeleted = false,
   }) {
     // 修复：如果数据库未初始化，先返回临时流并等待初始化完成再通知重订
-    if (!_isInitialized) {
+    if (!isInitialized) {
       logDebug('数据库尚未初始化，等待初始化完成后通知重新订阅...');
 
       final tempController = StreamController<List<Quote>>.broadcast();
@@ -266,7 +274,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
         try {
           if (_isInitializing && _initCompleter != null) {
             await _initCompleter!.future;
-          } else if (!_isInitialized) {
+          } else if (!isInitialized) {
             await init();
           }
 
@@ -433,6 +441,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
         _quotesController!.close();
       }
       _quotesController = StreamController<List<Quote>>.broadcast();
+      _coordinatorState.resetForNewWatchController();
 
       // 修复：在重置状态时确保原子性操作，避免竞态条件
       // 注意：_watchOffset 只能在这里（真正重建流、清空 _currentQuotes 时）归零。
@@ -481,6 +490,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase, _DatabaseQueryMixin {
             );
           } else {
             logDebug('后台生命周期下首屏/筛选查询已挂起: $e');
+            _coordinatorState.markDeferredRefresh(_quotesController);
           }
           if (_quotesController != null && !_quotesController!.isClosed) {
             _quotesController!.addError(e, stackTrace);
