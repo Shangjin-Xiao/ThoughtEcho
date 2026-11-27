@@ -281,11 +281,14 @@ extension _ThoughterSession on _ThoughterPageState {
     bool allowDetachedForRebuild = false,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final session = await _chatSessionService.createSession(
+    final session = await _chatSessionService.tryCreateSession(
       sessionType: _sessionTypeForMode(_currentMode),
       noteId: _boundNoteId,
       title: _hasBoundNote ? _getQuotePreview() : l10n.aiChat,
     );
+    if (session == null) {
+      return null;
+    }
     if (!mounted || _isDisposed) {
       unawaited(
         _chatSessionService.deleteEmptySession(session.id).catchError((_) {
@@ -747,17 +750,37 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   /// 补写会话建立前挂起的消息，保持它们在用户首条消息之前的顺序。
+  /// 若部分或全部消息写入失败（返回 `false` 或抛出异常），且仍处于同一会话代次，
+  /// 则按原序回填至 `_pendingPersistMessages` 前部，不丢失等待期间新入队的消息。
   Future<void> _flushPendingPersistMessages({String? targetSessionId}) async {
     if (_pendingPersistMessages.isEmpty) return;
     final sessionId = targetSessionId ?? _currentSessionId;
     if (sessionId == null) return;
+    final startGeneration = _sessionLoadGeneration;
     final pending = List<app_chat.ChatMessage>.from(_pendingPersistMessages);
     _pendingPersistMessages.clear();
+    final failed = <app_chat.ChatMessage>[];
     for (final message in pending) {
       try {
-        await _chatSessionService.tryAddMessage(sessionId, message);
+        final persisted =
+            await _chatSessionService.tryAddMessage(sessionId, message);
+        if (!persisted) {
+          failed.add(message);
+        }
       } catch (e) {
         logDebug('补写挂起消息失败: ${message.id} - $e');
+        failed.add(message);
+      }
+    }
+    if (failed.isNotEmpty &&
+        !_isDisposed &&
+        startGeneration == _sessionLoadGeneration &&
+        (_currentSessionId == null || _currentSessionId == sessionId)) {
+      final existingIds = _pendingPersistMessages.map((m) => m.id).toSet();
+      final toRestore =
+          failed.where((m) => existingIds.add(m.id)).toList(growable: false);
+      if (toRestore.isNotEmpty) {
+        _pendingPersistMessages.insertAll(0, toRestore);
       }
     }
   }

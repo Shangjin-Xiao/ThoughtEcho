@@ -80,7 +80,7 @@ class _InMemoryChatSessionService extends ChatSessionService {
   }
 
   @override
-  Future<ChatSession> createSession({
+  Future<ChatSession?> tryCreateSession({
     required String sessionType,
     String? noteId,
     required String title,
@@ -90,7 +90,24 @@ class _InMemoryChatSessionService extends ChatSessionService {
       await gate.future;
     }
     if (failCreateSession) {
-      throw StateError('simulated createSession failure');
+      return null;
+    }
+    return createSession(
+      sessionType: sessionType,
+      noteId: noteId,
+      title: title,
+    );
+  }
+
+  @override
+  Future<ChatSession> createSession({
+    required String sessionType,
+    String? noteId,
+    required String title,
+  }) async {
+    final gate = createSessionGate;
+    if (gate != null) {
+      await gate.future;
     }
     final now = DateTime.now();
     final session = ChatSession(
@@ -108,6 +125,7 @@ class _InMemoryChatSessionService extends ChatSessionService {
   Completer<void>? createSessionGate;
   bool failCreateSession = false;
   final List<String> tryAddMessageSessionIds = <String>[];
+  bool Function(app_chat.ChatMessage message)? shouldFailTryAddMessage;
 
   @override
   Future<ChatSession?> getLatestSessionForNote(String noteId) async {
@@ -146,7 +164,9 @@ class _InMemoryChatSessionService extends ChatSessionService {
     app_chat.ChatMessage message,
   ) async {
     tryAddMessageSessionIds.add(sessionId);
-    if (simulateWriteFailure || !_sessions.containsKey(sessionId)) {
+    if (simulateWriteFailure ||
+        !_sessions.containsKey(sessionId) ||
+        (shouldFailTryAddMessage?.call(message) ?? false)) {
       return false;
     }
     await addMessage(sessionId, message);
@@ -5053,6 +5073,74 @@ void main() {
         expect(
           savedMessages.any((m) => !m.isUser && m.content == '恢复后的回复'),
           isTrue,
+        );
+      },
+    );
+
+    testWidgets(
+      '_flushPendingPersistMessages 写入返回 false 时按原序回填队列并在下次重建冲刷成功落库',
+      (tester) async {
+        final agentService = _FakeAgentService(
+          settingsService: settingsService,
+          responseContent: '收到开场上下文',
+        );
+        var failOpeningOnce = true;
+        chatSessionService.shouldFailTryAddMessage = (message) {
+          if (failOpeningOnce &&
+              message.parsedMeta?['type'] == 'opening_context') {
+            failOpeningOnce = false;
+            return true;
+          }
+          return false;
+        };
+
+        await tester.pumpWidget(
+          await _buildHarness(
+            settingsService: settingsService,
+            chatSessionService: chatSessionService,
+            agentService: agentService,
+            child: ThoughterPage(
+              key: const ValueKey('pending_flush_failure_restore_page'),
+              entrySource: ThoughterEntrySource.explore,
+              openingMessage: '挂起待补写的开场洞察',
+              openingSource: ThoughterOpeningSource.periodicInsight,
+              insightPeriod: 'week',
+              insightDate: DateTime(2026, 4, 8),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 首轮发送：创建会话并首次 _flushPendingPersistMessages，但开场消息写入返回 false（应被回填进队列）
+        await _submitInput(tester, '第一句追问');
+        await _settleAgentTurn(tester);
+        await tester.pumpAndSettle();
+
+        expect(chatSessionService.sessions, hasLength(1));
+        final firstSession = chatSessionService.sessions.single;
+        final firstSaved =
+            await chatSessionService.getMessages(firstSession.id);
+        expect(
+          firstSaved.any((m) => m.content == '挂起待补写的开场洞察'),
+          isFalse,
+          reason: '首次冲刷模拟返回 false，开场消息暂未落库',
+        );
+
+        // 远端删除首会话并继续发送，触发 _rebuildDeletedCurrentSession -> 再次 _flushPendingPersistMessages
+        chatSessionService.simulateRemoteDeleteSession(firstSession.id);
+        await tester.pump();
+        await _submitInput(tester, '第二句追问');
+        await _settleAgentTurn(tester);
+        await tester.pumpAndSettle();
+
+        expect(chatSessionService.sessions, hasLength(1));
+        final secondSession = chatSessionService.sessions.single;
+        final secondSaved =
+            await chatSessionService.getMessages(secondSession.id);
+        expect(
+          secondSaved.any((m) => m.content == '挂起待补写的开场洞察'),
+          isTrue,
+          reason: '失败回填到 _pendingPersistMessages 的挂起消息应在后续冲刷中成功落库不丢失',
         );
       },
     );

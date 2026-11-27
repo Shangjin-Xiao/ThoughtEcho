@@ -861,7 +861,8 @@ class ChatSessionService extends ChangeNotifier {
     }
   }
 
-  Future<ChatSession> createSession({
+  /// 创建并持久化新会话；若底层数据库写入失败，记录错误并返回 `null`（不通知监听者）。
+  Future<ChatSession?> tryCreateSession({
     required String sessionType,
     String? noteId,
     required String title,
@@ -893,9 +894,35 @@ class ChatSessionService extends ChangeNotifier {
         error: e,
         source: 'ChatSessionService',
       );
+      return null;
     }
     notifyListeners();
     return session;
+  }
+
+  Future<ChatSession> createSession({
+    required String sessionType,
+    String? noteId,
+    required String title,
+  }) async {
+    final created = await tryCreateSession(
+      sessionType: sessionType,
+      noteId: noteId,
+      title: title,
+    );
+    if (created != null) {
+      return created;
+    }
+    final now = DateTime.now().toUtc();
+    return ChatSession(
+      id: const Uuid().v4(),
+      sessionType: sessionType,
+      noteId: noteId,
+      title: title,
+      createdAt: now,
+      lastActiveAt: now,
+      updatedAt: now,
+    );
   }
 
   Future<ChatSession?> getLatestSessionForNote(String noteId) async {

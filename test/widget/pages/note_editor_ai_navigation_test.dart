@@ -162,6 +162,14 @@ class _InMemoryChatSessionService extends ChatSessionService {
   Future<void> init() async {}
 
   @override
+  Future<ChatSession?> tryCreateSession({
+    required String sessionType,
+    String? noteId,
+    required String title,
+  }) =>
+      createSession(sessionType: sessionType, noteId: noteId, title: title);
+
+  @override
   Future<ChatSession> createSession({
     required String sessionType,
     String? noteId,
