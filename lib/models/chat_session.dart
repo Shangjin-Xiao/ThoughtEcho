@@ -1,5 +1,6 @@
 import 'chat_message.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/lww_utils.dart';
 
 /// 聊天会话模型
 ///
@@ -61,9 +62,9 @@ class ChatSession {
       'session_type': sessionType,
       'note_id': noteId,
       'title': title,
-      'created_at': createdAt.toIso8601String(),
-      'last_active_at': lastActiveAt.toIso8601String(),
-      'updated_at': (updatedAt ?? lastActiveAt).toUtc().toIso8601String(),
+      'created_at': LWWUtils.formatFixedUtcIso(createdAt),
+      'last_active_at': LWWUtils.formatFixedUtcIso(lastActiveAt),
+      'updated_at': LWWUtils.formatFixedUtcIso(updatedAt ?? lastActiveAt),
       'is_pinned': isPinned ? 1 : 0,
     };
   }
@@ -75,9 +76,10 @@ class ChatSession {
       'sessionType': sessionType,
       'noteId': noteId,
       'title': title,
-      'createdAt': createdAt.toIso8601String(),
-      'lastActiveAt': lastActiveAt.toIso8601String(),
-      if (updatedAt != null) 'updatedAt': updatedAt!.toUtc().toIso8601String(),
+      'createdAt': LWWUtils.formatFixedUtcIso(createdAt),
+      'lastActiveAt': LWWUtils.formatFixedUtcIso(lastActiveAt),
+      if (updatedAt != null)
+        'updatedAt': LWWUtils.formatFixedUtcIso(updatedAt!),
       'messages': messages.map((m) => m.toJson()).toList(),
       'isPinned': isPinned,
     };

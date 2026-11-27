@@ -89,6 +89,9 @@ class _InMemoryChatSessionService extends ChatSessionService {
     if (gate != null) {
       await gate.future;
     }
+    if (failCreateSession) {
+      throw StateError('simulated createSession failure');
+    }
     final now = DateTime.now();
     final session = ChatSession(
       id: 'session-${_sessionSeq++}',
@@ -103,6 +106,8 @@ class _InMemoryChatSessionService extends ChatSessionService {
   }
 
   Completer<void>? createSessionGate;
+  bool failCreateSession = false;
+  final List<String> tryAddMessageSessionIds = <String>[];
 
   @override
   Future<ChatSession?> getLatestSessionForNote(String noteId) async {
@@ -140,6 +145,7 @@ class _InMemoryChatSessionService extends ChatSessionService {
     String sessionId,
     app_chat.ChatMessage message,
   ) async {
+    tryAddMessageSessionIds.add(sessionId);
     if (simulateWriteFailure || !_sessions.containsKey(sessionId)) {
       return false;
     }
@@ -4940,5 +4946,115 @@ void main() {
         'periodic_insight',
       );
     });
+
+    testWidgets(
+      '重建已删除会话失败时清理死会话引用且后续恢复后不再尝试写入死会话',
+      (tester) async {
+        final firstResponseGate = Completer<AgentResponse>();
+        final secondResponseGate = Completer<AgentResponse>();
+        final agentService = _ControllableAgentService(
+          settingsService: settingsService,
+          responses: <Completer<AgentResponse>>[
+            firstResponseGate,
+            secondResponseGate,
+          ],
+        );
+        final now = DateTime(2026, 4, 20, 10, 0);
+        final deadSession = ChatSession(
+          id: 'session-dead-rebuild-fail',
+          sessionType: 'agent',
+          title: '待被远端删除的会话',
+          createdAt: now,
+          lastActiveAt: now,
+        );
+        chatSessionService.seedSession(deadSession, <app_chat.ChatMessage>[
+          app_chat.ChatMessage(
+            id: 'seed-u1',
+            content: '第一句历史',
+            isUser: true,
+            timestamp: now,
+          ),
+        ]);
+
+        await tester.pumpWidget(
+          await _buildHarness(
+            settingsService: settingsService,
+            chatSessionService: chatSessionService,
+            agentService: agentService,
+            child: ThoughterPage(
+              key: const ValueKey('rebuild_deleted_session_fail_page'),
+              entrySource: ThoughterEntrySource.explore,
+              session: deadSession,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 发起提问进入 _isLoading 状态
+        await tester.enterText(find.byType(TextField), '触发重建失败的提问');
+        await tester.pump();
+        tester
+            .widget<IconButton>(
+              find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+            )
+            .onPressed
+            ?.call();
+        await tester.pump();
+        expect(agentService.runCount, 1);
+
+        // 让 createSession 失败，再模拟远端删除当前会话触发 _rebuildDeletedCurrentSession
+        chatSessionService.failCreateSession = true;
+        chatSessionService.simulateRemoteDeleteSession(deadSession.id);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // 结束本轮回复，确认未抛未捕获异常且未创建出新会话
+        firstResponseGate.complete(
+          AgentResponse(content: '本轮回复', toolCalls: const []),
+        );
+        await _settleAgentTurn(tester);
+        await tester.pumpAndSettle();
+        expect(chatSessionService.sessions, isEmpty);
+
+        // 恢复 createSession 并清空写入记录；发送下一条消息时不应再向 deadSession.id 发起写入，
+        // 而应直接创建全新会话并成功落库。
+        chatSessionService.failCreateSession = false;
+        chatSessionService.tryAddMessageSessionIds.clear();
+
+        await tester.enterText(find.byType(TextField), '恢复后的新提问');
+        await tester.pump();
+        tester
+            .widget<IconButton>(
+              find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+            )
+            .onPressed
+            ?.call();
+        await tester.pump();
+        secondResponseGate.complete(
+          AgentResponse(content: '恢复后的回复', toolCalls: const []),
+        );
+        await _settleAgentTurn(tester);
+        await tester.pumpAndSettle();
+
+        expect(
+          chatSessionService.tryAddMessageSessionIds,
+          isNot(contains(deadSession.id)),
+          reason: '重建失败后应已清空死会话引用，后续不得再反复写入死会话',
+        );
+        expect(chatSessionService.sessions, hasLength(1));
+        final recoveredSession = chatSessionService.sessions.single;
+        expect(recoveredSession.id, isNot(equals(deadSession.id)));
+        final savedMessages =
+            await chatSessionService.getMessages(recoveredSession.id);
+        expect(
+          savedMessages.any((m) => m.isUser && m.content == '恢复后的新提问'),
+          isTrue,
+        );
+        expect(
+          savedMessages.any((m) => !m.isUser && m.content == '恢复后的回复'),
+          isTrue,
+        );
+      },
+    );
   });
 }

@@ -157,7 +157,7 @@ void main() {
         );
 
         final inspectDb = await openDatabase(legacyPath, singleInstance: true);
-        expect(await inspectDb.getVersion(), 3);
+        expect(await inspectDb.getVersion(), AgentMemoryService.schemaVersion);
         expect(
           await inspectDb.query(AgentMemoryService.tombstonesTable),
           isEmpty,
@@ -1904,6 +1904,10 @@ void main() {
           '2026-10-05T09:00:00.25',
         );
         expect(
+          await inspectDb.getVersion(),
+          AgentMemoryService.schemaVersion,
+        );
+        expect(
           byId['p_edited_later_utc']!['updated_at'],
           '2026-10-05T01:05:00.250000Z',
         );
@@ -2172,6 +2176,60 @@ void main() {
         expect(await svc.allFacts(), isEmpty);
       } finally {
         svc.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      }
+    });
+
+    test('已升级至 schemaVersion 4 的记忆库在后续 onOpen 时跳过全表 NOT GLOB 历史时间戳规范化',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('mem_v4_onopen_skip_');
+      final dbPath = p.join(dir.path, 'mem_v4.db');
+      final firstSvc = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: dbPath,
+      );
+      try {
+        await firstSvc.activeProfile();
+      } finally {
+        firstSvc.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+
+      // 手动向已处于 v4 的库注入一条非定宽时间行，若后续 onOpen 仍跑全表 NOT GLOB 扫描则会改写它
+      final rawDb = await openDatabase(dbPath, singleInstance: false);
+      try {
+        expect(await rawDb.getVersion(), AgentMemoryService.schemaVersion);
+        await rawDb.insert(AgentMemoryService.profileTable, <String, Object?>{
+          'id': 'p_v4_sentinel',
+          'kind': 'preference',
+          'directive': '验证 onOpen 不再全表规范化',
+          'observed_at': '2026-10-05T09:00:00+08:00',
+          'updated_at': '2026-10-05T09:00:00+08:00',
+          'status': 'active',
+        });
+      } finally {
+        await rawDb.close();
+      }
+
+      final secondSvc = AgentMemoryService(
+        settingsService: settingsService,
+        databasePath: dbPath,
+      );
+      try {
+        await secondSvc.activeProfile();
+        final inspectDb = await openDatabase(dbPath, singleInstance: true);
+        final rows = await inspectDb.query(
+          AgentMemoryService.profileTable,
+          where: 'id = ?',
+          whereArgs: const <Object?>['p_v4_sentinel'],
+        );
+        expect(rows, hasLength(1));
+        expect(rows.single['observed_at'], '2026-10-05T09:00:00+08:00');
+      } finally {
+        secondSvc.dispose();
         await Future<void>.delayed(const Duration(milliseconds: 20));
         if (await dir.exists()) {
           await dir.delete(recursive: true);

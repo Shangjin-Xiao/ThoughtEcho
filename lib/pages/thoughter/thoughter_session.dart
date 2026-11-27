@@ -444,14 +444,31 @@ extension _ThoughterSession on _ThoughterPageState {
     final messagesSnapshot = List<app_chat.ChatMessage>.from(_messages);
     final pendingSnapshot =
         List<app_chat.ChatMessage>.from(_pendingPersistMessages);
-    _pendingPersistMessages.clear();
 
-    final newSessionId = await _createNewSession(
-      expectedGeneration: startGeneration,
-      allowDetachedForRebuild:
-          previousSessionId != null && messagesSnapshot.any((m) => m.isUser),
-    );
-    if (newSessionId == null) return null;
+    String? newSessionId;
+    try {
+      newSessionId = await _createNewSession(
+        expectedGeneration: startGeneration,
+        allowDetachedForRebuild:
+            previousSessionId != null && messagesSnapshot.any((m) => m.isUser),
+      );
+    } catch (e) {
+      logDebug('重建已删除会话失败: $e');
+      newSessionId = null;
+    }
+    if (newSessionId == null) {
+      // 重建失败时保留 _pendingPersistMessages（含等待期间新入队消息）不丢失，
+      // 同时清理已确认失效的死会话引用，避免后续继续反复尝试写入已删除会话。
+      if (startGeneration == _sessionLoadGeneration &&
+          previousSessionId != null &&
+          _currentSessionId == previousSessionId) {
+        _currentSessionId = null;
+        if (_messagesSessionId == previousSessionId) {
+          _messagesSessionId = null;
+        }
+      }
+      return null;
+    }
     if (!mounted || _isDisposed) {
       unawaited(
         _chatSessionService.deleteEmptySession(newSessionId).catchError((_) {
@@ -475,16 +492,20 @@ extension _ThoughterSession on _ThoughterPageState {
         _pendingAskUserSessionId = newSessionId;
       }
     }
-    for (final pendingMsg in pendingSnapshot) {
-      try {
-        await _chatSessionService.tryAddMessage(newSessionId, pendingMsg);
-      } catch (e) {
-        logDebug('补写挂起消息失败: ${pendingMsg.id} - $e');
-      }
-    }
     if (startGeneration == _sessionLoadGeneration &&
         _currentSessionId == newSessionId) {
+      // 同代次下 _pendingPersistMessages 仍完整保留 pendingSnapshot 与 await 期间新入队消息，
+      // 直接一次性按序冲刷并清空，避免重复写入或丢失。
       await _flushPendingPersistMessages(targetSessionId: newSessionId);
+    } else {
+      // 离队重建（用户已切到新会话）：仅补写重建前属于旧会话的 pendingSnapshot，不触碰新会话队列。
+      for (final pendingMsg in pendingSnapshot) {
+        try {
+          await _chatSessionService.tryAddMessage(newSessionId, pendingMsg);
+        } catch (e) {
+          logDebug('补写挂起消息失败: ${pendingMsg.id} - $e');
+        }
+      }
     }
 
     // 合并快照与同代次实时列表，顺序沿首次出现顺序，内容优先采用同代次 _messages 中的最新修订

@@ -89,7 +89,8 @@ class AgentMemoryService extends ChangeNotifier {
   ///
   /// v2：画像层加 `source_note_ids`（Dreaming 的来源归因），并新增近况切片表。
   /// v3：补齐同步元数据（`updated_at`、`replaces_id`、Dreaming 笔记依据、墓碑表与 `agent_memory_meta`）。
-  static const int schemaVersion = 3;
+  /// v4：将历史时间戳全表 `NOT GLOB` 规范化收敛为一次性升级任务，避免每次 `onOpen` 全表扫描。
+  static const int schemaVersion = 4;
 
   static const String profileTable = 'agent_memory_profile';
   static const String factsTable = 'agent_memory_facts';
@@ -221,7 +222,11 @@ class AgentMemoryService extends ChangeNotifier {
         onCreate: (db, version) => _ensureSchema(db),
         // 建表语句都是 IF NOT EXISTS，升级和打开都跑一遍即可自愈：
         // 记忆丢一条不致命，但表不在会让每次 Thoughter 调用都炸。
-        onUpgrade: (db, oldVersion, newVersion) => _ensureSchema(db),
+        // 历史时间戳全表规范化仅在 oldVersion < 4 的升级路径执行一次，避免每次 onOpen 全表扫描。
+        onUpgrade: (db, oldVersion, newVersion) => _ensureSchema(
+          db,
+          normalizeLegacyTimestamps: oldVersion < 4,
+        ),
         onOpen: _ensureSchema,
       );
       // dispose 可能发生在打开过程中：那时 _database 还是 null，dispose 关不到
@@ -298,7 +303,10 @@ class AgentMemoryService extends ChangeNotifier {
     return path.join(basePath, databaseFileName);
   }
 
-  static Future<void> _ensureSchema(DatabaseExecutor db) async {
+  static Future<void> _ensureSchema(
+    DatabaseExecutor db, {
+    bool normalizeLegacyTimestamps = false,
+  }) async {
     // 画像层：每次对话注入，因此条目少、有硬预算。
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $profileTable(
@@ -389,20 +397,22 @@ class AgentMemoryService extends ChangeNotifier {
       'ON $factsTable(created_at)',
     );
 
-    // 先完成旧时间列的显式时区转换与 6 位微秒定宽补齐（同时为所有被改写列建立 *_backup 快照），
-    // 再用 COALESCE 回填缺失的 updated_at，避免先把无时区列复制到 updated_at 掩盖同事件显式时区配对。
-    await _normalizeLegacyMemoryTimestamps(db);
+    if (normalizeLegacyTimestamps) {
+      // 先完成旧时间列的显式时区转换与 6 位微秒定宽补齐（同时为所有被改写列建立 *_backup 快照），
+      // 再用 COALESCE 回填缺失的 updated_at，避免先把无时区列复制到 updated_at 掩盖同事件显式时区配对。
+      await _normalizeLegacyMemoryTimestamps(db);
 
-    await db.execute('''
-      UPDATE $profileTable
-      SET updated_at = COALESCE(NULLIF(updated_at, ''), observed_at)
-      WHERE updated_at IS NULL OR updated_at = ''
-    ''');
-    await db.execute('''
-      UPDATE $factsTable
-      SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at)
-      WHERE updated_at IS NULL OR updated_at = ''
-    ''');
+      await db.execute('''
+        UPDATE $profileTable
+        SET updated_at = COALESCE(NULLIF(updated_at, ''), observed_at)
+        WHERE updated_at IS NULL OR updated_at = ''
+      ''');
+      await db.execute('''
+        UPDATE $factsTable
+        SET updated_at = COALESCE(NULLIF(updated_at, ''), created_at)
+        WHERE updated_at IS NULL OR updated_at = ''
+      ''');
+    }
   }
 
   static String _nonCanonicalMemoryTimeClause(

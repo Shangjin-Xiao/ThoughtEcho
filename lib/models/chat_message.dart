@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:meta/meta.dart';
 
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/lww_utils.dart';
 
 /// 消息状态枚举 - 追踪消息的生成过程
 enum MessageState {
@@ -122,8 +123,8 @@ class ChatMessage {
       'session_id': sessionId,
       'role': role,
       'content': content,
-      'created_at': timestamp.toIso8601String(),
-      'updated_at': (updatedAt ?? timestamp).toUtc().toIso8601String(),
+      'created_at': LWWUtils.formatFixedUtcIso(timestamp),
+      'updated_at': LWWUtils.formatFixedUtcIso(updatedAt ?? timestamp),
       'included_in_context': includedInContext ? 1 : 0,
       'meta_json': metaJson,
       'content_format': contentFormat,
@@ -138,8 +139,9 @@ class ChatMessage {
       'content': content,
       'isUser': isUser,
       'role': role,
-      'timestamp': timestamp.toIso8601String(),
-      if (updatedAt != null) 'updatedAt': updatedAt!.toUtc().toIso8601String(),
+      'timestamp': LWWUtils.formatFixedUtcIso(timestamp),
+      if (updatedAt != null)
+        'updatedAt': LWWUtils.formatFixedUtcIso(updatedAt!),
       'includedInContext': includedInContext,
       'metaJson': metaJson,
       'state': state.name,
