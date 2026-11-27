@@ -500,7 +500,7 @@ void main() {
     });
 
     test(
-        'tiered mode routes cardGeneration/periodicInsight to primary and dailyInsight/sessionTitle/dreaming to lightProvider',
+        'tiered mode routes cardGeneration/dreaming to primary and dailyInsight/periodicInsight/sessionTitle to lightProvider',
         () async {
       await harness.settingsService.saveMultiAISettings(
         const MultiAISettings(
@@ -525,9 +525,12 @@ void main() {
         openAIStreamService: streamService,
       );
 
-      // Primary tier: cardGeneration + periodicInsight
+      // Primary tier: cardGeneration
       final svg = await aiService.generateSVG('测试生成分享卡片');
       expect(svg, contains('<svg'));
+
+      // Light tier: periodicInsight -> followed immediately by Dreaming (Primary)
+      // Verifies chained Dreaming after periodic insight switches back to primary.
       await aiService
           .streamReportInsight(
             periodLabel: '本周',
@@ -537,23 +540,23 @@ void main() {
             fullNotesContent: '随笔内容',
           )
           .join();
-
-      // Light tier: dailyInsight + sessionTitle + dreaming
-      await aiService.streamGenerateDailyPrompt(l10n).join();
-      streamService.completionReply = '轻量标题';
-      await aiService.generateSessionTitle('测试轻量模型标题生成');
       streamService.completionReply = '{"taste":"凝练"}';
       await aiService.completeForBackgroundSummary(
         systemPrompt: 'sys',
         userMessage: 'usr',
       );
 
+      // Light tier: dailyInsight + sessionTitle
+      await aiService.streamGenerateDailyPrompt(l10n).join();
+      streamService.completionReply = '轻量标题';
+      await aiService.generateSessionTitle('测试轻量模型标题生成');
+
       expect(streamService.calls.map((c) => c.provider.id).toList(), [
         'p_agent', // generateSVG (cardGeneration -> primary)
-        'p_agent', // streamReportInsight (periodicInsight -> primary)
+        'p_daily', // streamReportInsight (periodicInsight -> light)
+        'p_agent', // completeForBackgroundSummary (dreaming -> primary)
         'p_daily', // streamGenerateDailyPrompt (dailyInsight -> light)
         'p_daily', // generateSessionTitle (sessionTitle -> light)
-        'p_daily', // completeForBackgroundSummary (dreaming -> light)
       ]);
     });
 
@@ -592,7 +595,20 @@ void main() {
         await aiService.hasValidApiKeyAsync(task: AITask.sessionTitle),
         isTrue,
       );
+      expect(
+        await aiService.hasValidApiKeyAsync(task: AITask.periodicInsight),
+        isTrue,
+      );
       await aiService.streamGenerateDailyPrompt(l10n).join();
+      await aiService
+          .streamReportInsight(
+            periodLabel: '本周',
+            activeDays: 2,
+            noteCount: 2,
+            totalWordCount: 80,
+            fullNotesContent: '随笔内容',
+          )
+          .join();
       final title = await aiService.generateSessionTitle('测试本地免密轻量模型标题');
       expect(title, '本地免密模型标题');
       streamService.completionReply = '{"taste":"简洁"}';
@@ -602,9 +618,10 @@ void main() {
       );
 
       expect(streamService.calls.map((c) => c.provider.id).toList(), [
-        'p_ollama_local',
-        'p_ollama_local',
-        'p_ollama_local',
+        'p_ollama_local', // dailyInsight -> light
+        'p_ollama_local', // periodicInsight -> light
+        'p_ollama_local', // sessionTitle -> light
+        'p_agent', // dreaming -> primary
       ]);
     });
 

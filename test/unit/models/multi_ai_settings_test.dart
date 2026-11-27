@@ -447,7 +447,11 @@ void main() {
         AITask.sessionTitle,
         AITask.dreaming,
       ]);
+      expect(AITask.agent.usesLightTier, isFalse);
+      expect(AITask.dreaming.usesLightTier, isFalse);
       expect(AITask.cardGeneration.usesLightTier, isFalse);
+      expect(AITask.dailyInsight.usesLightTier, isTrue);
+      expect(AITask.periodicInsight.usesLightTier, isTrue);
       expect(AITask.sessionTitle.usesLightTier, isTrue);
     });
 
@@ -471,7 +475,7 @@ void main() {
       expect(
           tieredWithLight.resolveProviderForTask(AITask.agent)?.id, 'reason_p');
       expect(
-        tieredWithLight.resolveProviderForTask(AITask.periodicInsight)?.id,
+        tieredWithLight.resolveProviderForTask(AITask.dreaming)?.id,
         'reason_p',
       );
       expect(
@@ -484,11 +488,11 @@ void main() {
         'fast_p',
       );
       expect(
-        tieredWithLight.resolveProviderForTask(AITask.sessionTitle)?.id,
+        tieredWithLight.resolveProviderForTask(AITask.periodicInsight)?.id,
         'fast_p',
       );
       expect(
-        tieredWithLight.resolveProviderForTask(AITask.dreaming)?.id,
+        tieredWithLight.resolveProviderForTask(AITask.sessionTitle)?.id,
         'fast_p',
       );
 
@@ -523,12 +527,20 @@ void main() {
       expect(switchedCustom.routingMode, AIRoutingMode.custom);
       expect(switchedCustom.taskProviderIds, {
         AITask.dailyInsight: 'fast_p',
+        AITask.periodicInsight: 'fast_p',
         AITask.sessionTitle: 'fast_p',
-        AITask.dreaming: 'fast_p',
       });
       expect(
         switchedCustom.resolveProviderForTask(AITask.agent)?.id,
         'default_p',
+      );
+      expect(
+        switchedCustom.resolveProviderForTask(AITask.dreaming)?.id,
+        'default_p',
+      );
+      expect(
+        switchedCustom.resolveProviderForTask(AITask.periodicInsight)?.id,
+        'fast_p',
       );
       expect(
         switchedCustom.resolveProviderForTask(AITask.sessionTitle)?.id,
@@ -569,8 +581,8 @@ void main() {
       // Clearing all custom assignments to Follow Default persists across tiered -> custom switches and JSON reloads
       final clearedCustom = switchedCustom
           .withTaskProvider(AITask.dailyInsight, null)
-          .withTaskProvider(AITask.sessionTitle, null)
-          .withTaskProvider(AITask.dreaming, null);
+          .withTaskProvider(AITask.periodicInsight, null)
+          .withTaskProvider(AITask.sessionTitle, null);
       expect(clearedCustom.taskProviderIds, isEmpty);
       expect(clearedCustom.customRoutingInitialized, isTrue);
 

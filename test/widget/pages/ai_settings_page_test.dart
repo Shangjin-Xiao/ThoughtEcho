@@ -1691,11 +1691,11 @@ void main() {
       final customSettings = settingsService.multiAISettings;
       expect(customSettings.routingMode, AIRoutingMode.custom);
       expect(customSettings.taskProviderIds[AITask.dailyInsight], 'p_light');
+      expect(customSettings.taskProviderIds[AITask.periodicInsight], 'p_light');
       expect(customSettings.taskProviderIds[AITask.sessionTitle], 'p_light');
-      expect(customSettings.taskProviderIds[AITask.dreaming], 'p_light');
       expect(customSettings.taskProviderIds.containsKey(AITask.agent), isFalse);
       expect(
-        customSettings.taskProviderIds.containsKey(AITask.periodicInsight),
+        customSettings.taskProviderIds.containsKey(AITask.dreaming),
         isFalse,
       );
       expect(
