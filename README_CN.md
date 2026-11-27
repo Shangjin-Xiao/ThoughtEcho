@@ -32,7 +32,8 @@
     <a href="README.md"><b>English</b></a> • 
     <a href="README_CN.md"><b>简体中文</b></a> •
     <a href="README_JA.md"><b>日本語</b></a> •
-    <a href="README_KO.md"><b>한국어</b></a> •
+    <a href="README_KO.md"><b>한국어</b></a> • 
+    <a href="README.tr.md"><b>Türkçe</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>官方网站</b></a> •
     <a href="docs/USER_MANUAL.md"><b>用户手册</b></a> •
     <a href="https://note.shangjinyun.cn/user-guide.html"><b>网页指南</b></a>
