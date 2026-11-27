@@ -379,5 +379,70 @@ void main() {
         'Yu Mincho',
       );
     });
+
+    test('forLocale 回退系统衬线体时归零字重下限，内嵌字体语种保持原值', () async {
+      const fallbackLocales = [
+        Locale('ja'),
+        Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+        Locale('zh', 'TW'),
+        Locale('ko'),
+      ];
+      const bundledLocales = <Locale?>[
+        Locale('zh'),
+        Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+        Locale('en'),
+        null,
+      ];
+
+      for (final style in [ThemeStyle.paper, ThemeStyle.plain]) {
+        final form = style.form;
+        expect(form.titleWeightFloor, greaterThan(0));
+        expect(form.bodyWeightFloor, greaterThan(0));
+
+        for (final locale in fallbackLocales) {
+          final resolved = form.forLocale(locale);
+          expect(
+            resolved.titleWeightFloor,
+            0,
+            reason: '${style.name} 在 $locale 下回退系统字体时 titleWeightFloor 应归零',
+          );
+          expect(
+            resolved.bodyWeightFloor,
+            0,
+            reason: '${style.name} 在 $locale 下回退系统字体时 bodyWeightFloor 应归零',
+          );
+        }
+
+        for (final locale in bundledLocales) {
+          final resolved = form.forLocale(locale);
+          expect(
+            resolved.titleWeightFloor,
+            form.titleWeightFloor,
+            reason: '${style.name} 在 $locale 下走随包字体时 titleWeightFloor 应保持原值',
+          );
+          expect(
+            resolved.bodyWeightFloor,
+            form.bodyWeightFloor,
+            reason: '${style.name} 在 $locale 下走随包字体时 bodyWeightFloor 应保持原值',
+          );
+        }
+
+        final appTheme = AppTheme();
+        await appTheme.setThemeStyle(style);
+        final jaTheme = appTheme.createLightThemeData(
+          locale: const Locale('ja'),
+        );
+        expect(
+          jaTheme.extension<AppTypographyTokens>()?.bodyWeightFloor,
+          0,
+          reason: '${style.name} 日文主题令牌 bodyWeightFloor 应为 0',
+        );
+        expect(
+          jaTheme.textTheme.bodyLarge?.fontWeight,
+          isNull,
+          reason: '${style.name} 日文正文不应被强抬到随包字体的 w600 下限',
+        );
+      }
+    });
   });
 }

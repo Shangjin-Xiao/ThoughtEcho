@@ -210,7 +210,7 @@ flutter:
     # `TextStyle.fontWeight` 由引擎映射到 wght 轴，所以全项目现有的
     # `copyWith(fontWeight: ...)` 照常生效，不需要改成 fontVariations。
     #
-    # 产物由 `scripts/fonts/build_serif_subset.py` 生成（思源宋体 GB2312 子集），
+    # 产物由 `scripts/fonts/build_serif_subset.py` 生成（思源宋体 GB2312 + Big5 一级 + JIS 一级汉字子集），
     # 许可证见 assets/fonts/OFL.txt。
     - family: NotoSerifSC
       fonts:
