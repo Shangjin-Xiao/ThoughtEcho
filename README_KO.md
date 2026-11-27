@@ -2,9 +2,9 @@
   <a href="https://note.shangjinyun.cn/">
     <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner-en.png" alt="ThoughtEcho - AI-Powered Inspiration Notebook" width="100%">
   </a>
-  
+
   # ThoughtEcho (心迹)
-  
+
   <p align="center">
     <b>📝 나만의 AI 영감 스크랩북 · 떠오르면 바로 적고, 읽으면 바로 발췌하고, 나머지는 AI에게 맡기세요.</b><br>
     <b>Your Personal AI-Powered Inspiration Notebook — Jot it down, clip what you read, let AI sort out the rest.</b>
@@ -35,10 +35,10 @@
   </p>
 
   <p align="center">
-    <a href="README.md"><b>English</b></a> • 
+    <a href="README.md"><b>English</b></a> •
     <a href="README_CN.md"><b>简体中文</b></a> •
     <a href="README_JA.md"><b>日本語</b></a> •
-    <a href="README_KO.md"><b>한국어</b></a> • 
+    <a href="README_KO.md"><b>한국어</b></a> •
     <a href="README.tr.md"><b>Türkçe</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>공식 웹사이트</b></a> •
     <a href="docs/USER_MANUAL.md"><b>사용자 매뉴얼</b></a> •
@@ -54,12 +54,12 @@
 
   <p><sub>Windows: Microsoft Store 권장 (자동 업데이트 지원) · Android: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">GitHub Releases</a>에서 APK 다운로드</sub></p>
   <p><sub>🌍 <b>다국어 지원:</b> <b>한국어</b>, <b>English</b>, <b>简体中文</b>, <b>日本語</b> 완벽 지원 (독일어, 스페인어, 프랑스어 등 순차 지원 예정)</sub></p>
-  
+
 </div>
 
 ---
 
-> **ThoughtEcho(心迹)** 는 우아하고 로컬 우선이며 AI가 결합된 크로스 플랫폼 영감 노트 및 발췌 앱입니다.  
+> **ThoughtEcho(心迹)** 는 우아하고 로컬 우선이며 AI가 결합된 크로스 플랫폼 영감 노트 및 발췌 앱입니다.
 > **ThoughtEcho** is an elegant, local-first, AI-powered cross-platform inspiration and quote notebook designed to capture fleeting thoughts, organize reading excerpts, and unlock deeper creative potential.
 
 ---
@@ -155,7 +155,7 @@
 ## 🚀 빠른 시작
 
 1. **사전 준비**
-   
+
    Flutter 3.29+ 및 Dart 3.5+ 가 설치되어 있는지 확인하세요. `flutter doctor` 명령어로 환경을 확인합니다:
    ```bash
    flutter doctor
@@ -178,7 +178,7 @@
    ```
 
 5. **AI 서비스 설정 (선택 사항)**
-   
+
    **설정 → AI 설정**으로 이동하여 원하는 AI 제공업체(예: DeepSeek, Ollama, OpenAI 등)를 선택하고 API 키를 입력하면 AI 질의응답, Thoughter 에이전트, 정기 인사이트 기능을 바로 사용할 수 있습니다.
 
 ## 🗺️ 개발 로드맵

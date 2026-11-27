@@ -2,9 +2,9 @@
   <a href="https://note.shangjinyun.cn/">
     <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner-en.png" alt="ThoughtEcho - AI-Powered Inspiration Notebook" width="100%">
   </a>
-  
+
   # ThoughtEcho (心迹)
-  
+
   <p align="center">
     <b>📝 あなただけの AI インスピレーションノート · 思いついたらすぐ記録、読んだらすぐ抜粋、あとはAIにおまかせ。</b><br>
     <b>Your Personal AI-Powered Inspiration Notebook — Jot it down, clip what you read, let AI sort out the rest.</b>
@@ -35,10 +35,10 @@
   </p>
 
   <p align="center">
-    <a href="README.md"><b>English</b></a> • 
+    <a href="README.md"><b>English</b></a> •
     <a href="README_CN.md"><b>简体中文</b></a> •
     <a href="README_JA.md"><b>日本語</b></a> •
-    <a href="README_KO.md"><b>한국어</b></a> • 
+    <a href="README_KO.md"><b>한국어</b></a> •
     <a href="README.tr.md"><b>Türkçe</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>公式サイト</b></a> •
     <a href="docs/USER_MANUAL.md"><b>ユーザーマニュアル</b></a> •
@@ -54,12 +54,12 @@
 
   <p><sub>Windows: Microsoft Store 推奨（自動更新対応） · Android: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">GitHub Releases</a> から APK をダウンロード</sub></p>
   <p><sub>🌍 <b>多言語対応:</b> <b>日本語</b>、<b>English</b>、<b>简体中文</b>、<b>한국어</b> を完全サポート（ドイツ語、スペイン語、フランス語等は順次対応中）</sub></p>
-  
+
 </div>
 
 ---
 
-> **ThoughtEcho（心迹）** は、エレガントでローカルファースト、AI駆動のクロスプラットフォームなインスピレーションノート＆引用抜粋アプリです。  
+> **ThoughtEcho（心迹）** は、エレガントでローカルファースト、AI駆動のクロスプラットフォームなインスピレーションノート＆引用抜粋アプリです。
 > **ThoughtEcho** is an elegant, local-first, AI-powered cross-platform inspiration and quote notebook designed to capture fleeting thoughts, organize reading excerpts, and unlock deeper creative potential.
 
 ---
@@ -155,7 +155,7 @@
 ## 🚀 クイックスタート
 
 1. **前提条件**
-   
+
    Flutter 3.29+ および Dart 3.5+ がインストールされていることを確認してください。`flutter doctor` を実行して環境を確認します：
    ```bash
    flutter doctor
@@ -178,7 +178,7 @@
    ```
 
 5. **AI サービスの設定（任意）**
-   
+
    **設定 → AI設定** に移動し、お好みの AI プロバイダー（例：DeepSeek、Ollama、OpenAI 等）を選択して API キーを入力すると、AI Q&A や Thoughter エージェント、定期インサイトが利用可能になります。
 
 ## 🗺️ 開発ロードマップ

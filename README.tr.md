@@ -2,9 +2,9 @@
   <a href="https://note.shangjinyun.cn/">
     <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner-en.png" alt="ThoughtEcho - Yapay Zeka Destekli İlham Defteri" width="100%">
   </a>
-  
+
   # ThoughtEcho (心迹)
-  
+
   <p align="center">
     <b>📝 Kişisel Yapay Zeka Destekli İlham Defteriniz — Aklınıza geleni not alın, okuduğunuzu kırpın, gerisini yapay zekaya bırakın.</b><br>
     <b>Your Personal AI-Powered Inspiration Notebook — Jot it down, clip what you read, let AI sort out the rest.</b>
@@ -35,14 +35,14 @@
   </p>
 
   <p align="center">
-    <a href="README.md"><b>English</b></a> • 
-    <a href="README_CN.md"><b>简体中文</b></a> • 
-    <a href="README.zh-Hant.md"><b>繁體中文</b></a> • 
-    <a href="README_JA.md"><b>日本語</b></a> • 
-    <a href="README_KO.md"><b>한국어</b></a> • 
-    <a href="README.tr.md"><b>Türkçe</b></a> • 
-    <a href="https://note.shangjinyun.cn/"><b>Resmi Web Sitesi</b></a> • 
-    <a href="docs/USER_MANUAL.md"><b>Kullanıcı Kılavuzu</b></a> • 
+    <a href="README.md"><b>English</b></a> •
+    <a href="README_CN.md"><b>简体中文</b></a> •
+    <a href="README.zh-Hant.md"><b>繁體中文</b></a> •
+    <a href="README_JA.md"><b>日本語</b></a> •
+    <a href="README_KO.md"><b>한국어</b></a> •
+    <a href="README.tr.md"><b>Türkçe</b></a> •
+    <a href="https://note.shangjinyun.cn/"><b>Resmi Web Sitesi</b></a> •
+    <a href="docs/USER_MANUAL.md"><b>Kullanıcı Kılavuzu</b></a> •
     <a href="https://note.shangjinyun.cn/user-guide.html"><b>Web Rehberi</b></a>
   </p>
 
@@ -53,7 +53,7 @@
 
   <p><sub>Windows: Microsoft Store üzerinden önerilir (otomatik güncelleme) · Android: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">GitHub Releases</a> üzerinden APK indirin</sub></p>
   <p><sub>🌍 <b>Yerelleştirme:</b> <b>English</b>, <b>简体中文</b>, <b>繁體中文</b>, <b>日本語</b> ve <b>한국어</b> için tam destek (Almanca, İspanyolca, Fransızca devam ediyor)</sub></p>
-  
+
 </div>
 
 ---
@@ -177,7 +177,7 @@
 ## 🚀 Hızlı Başlangıç
 
 1. **Ön Koşullar**
-   
+
    Flutter 3.29+ ve Dart 3.5+ sürümlerinin kurulu olduğundan emin olun. Ortamınızı doğrulamak için `flutter doctor` komutunu çalıştırın:
    ```bash
    flutter doctor
@@ -200,8 +200,8 @@
    ```
 
 5. **Yapay Zeka Hizmetlerini Yapılandırın (İsteğe Bağlı)**
-   
-   **Ayarlar → Yapay Zeka Ayarları** bölümüne gidin, bir yapay zeka sağlayıcısı ön ayarı seçin (örn. DeepSeek, Ollama, OpenAI), API Anahtarınızı yapıştırın ve Yapay Zeka Soru-Cevap, Thoughter ajanı ve dönemsel içgörüleri kullanmaya başlayın.
+
+   **Settings → AI Settings** (Ayarlar → Yapay Zekâ Ayarları) bölümüne gidin, bir yapay zeka sağlayıcısı ön ayarı seçin (örn. DeepSeek, Ollama, OpenAI), API Anahtarınızı yapıştırın ve Yapay Zeka Soru-Cevap, Thoughter ajanı ve dönemsel içgörüleri kullanmaya başlayın.
 
 ## 🗺️ Geliştirme Yol Haritası
 
@@ -235,7 +235,7 @@
         • Yapay zeka doğal dil anlamsal araması<br>
         • Sesten metne hızlı yakalama<br>
         • Kamera OCR metin tanıma<br>
-        • Yapay zeka otomatik yazar ve kaynak çıkarma<br><br>
+        • Yapay zekâ ile otomatik yazar ve kaynak çıkarımı<br><br>
         <b>🌍 Kullanıcı Deneyimi ve Bilgi</b><br>
         • Etkileşimli defter temaları ve özel kağıt dokuları<br>
         • Bilgi grafiği bağlama ve konu kümeleme<br>
