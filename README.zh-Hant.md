@@ -2,9 +2,9 @@
   <a href="https://note.shangjinyun.cn/">
     <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner.png" alt="ThoughtEcho 心跡 - 你的專屬靈感摘錄筆記本" width="100%">
   </a>
-  
+
   # 心跡 (ThoughtEcho)
-  
+
   <p align="center">
     <b>📝 你的專屬 AI 靈感摘錄筆記本 · 想到就記，讀到就摘，剩下的交給 AI。</b><br>
     <b>Your Personal AI-Powered Inspiration Notebook — Jot it down, clip what you read, let AI sort out the rest.</b>
@@ -35,11 +35,12 @@
   </p>
 
   <p align="center">
-    <a href="README.md"><b>English</b></a> • 
+    <a href="README.md"><b>English</b></a> •
     <a href="README_CN.md"><b>简体中文</b></a> •
     <a href="README.zh-Hant.md"><b>繁體中文</b></a> •
     <a href="README_JA.md"><b>日本語</b></a> •
     <a href="README_KO.md"><b>한국어</b></a> •
+    <a href="README.tr.md"><b>Türkçe</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>官方網站</b></a> •
     <a href="docs/USER_MANUAL.md"><b>使用者手冊</b></a> •
     <a href="https://note.shangjinyun.cn/user-guide.html"><b>網頁指南</b></a>
@@ -54,12 +55,12 @@
 
   <p><sub>Windows：推薦由 Microsoft Store 安裝（支援自動更新）· Android：請至 <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">GitHub Releases</a> 下載 APK</sub></p>
   <p><sub>🌍 <b>語言支援：</b>完整支援 <b>繁體中文</b>、<b>简体中文</b>、<b>English</b>、<b>日本語</b> 與 <b>한국어</b>（德語、西班牙語、法語等正在完善中）</sub></p>
-  
+
 </div>
 
 ---
 
-> **ThoughtEcho（心跡）** 是一款優雅、本機優先、AI 賦能的跨平台靈感筆記與知識摘錄應用程式。  
+> **ThoughtEcho（心跡）** 是一款優雅、本機優先、AI 賦能的跨平台靈感筆記與知識摘錄應用程式。
 > **ThoughtEcho** is an elegant, local-first, AI-powered cross-platform inspiration and quote notebook designed to capture fleeting thoughts, organize reading excerpts, and unlock deeper creative potential.
 
 ---
@@ -179,7 +180,7 @@
 ## 🚀 快速開始
 
 1. **環境準備**
-   
+
    確保已安裝 Flutter 3.29+ 與 Dart 3.5+ 環境。執行 `flutter doctor` 檢查環境配置：
    ```bash
    flutter doctor
@@ -202,7 +203,7 @@
    ```
 
 5. **設定 AI 服務（選用）**
-   
+
    在應用程式內前往「**設定 → AI 設定**」，選擇預設的 AI 服務商（如 DeepSeek、Ollama、OpenAI 等），填入你的 API Key，即可啟用 AI 問答、Thoughter 智慧代理與週期洞察等功能。
 
 ## 🗺️ 發展藍圖

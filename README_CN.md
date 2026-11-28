@@ -2,9 +2,9 @@
   <a href="https://note.shangjinyun.cn/">
     <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner.png" alt="ThoughtEcho 心迹 - 你的专属灵感摘录本" width="100%">
   </a>
-  
+
   # 心迹 (ThoughtEcho)
-  
+
   <p>
     <b>📝 你的专属灵感摘录本 / Your Personal AI-Powered Inspiration Notebook</b><br>
     <b>想到就记，读到就摘，剩下的交给 AI。</b>
@@ -29,10 +29,11 @@
   </p>
 
   <p>
-    <a href="README.md"><b>English</b></a> • 
+    <a href="README.md"><b>English</b></a> •
     <a href="README_CN.md"><b>简体中文</b></a> •
     <a href="README_JA.md"><b>日本語</b></a> •
     <a href="README_KO.md"><b>한국어</b></a> •
+    <a href="README.tr.md"><b>Türkçe</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>官方网站</b></a> •
     <a href="docs/USER_MANUAL.md"><b>用户手册</b></a> •
     <a href="https://note.shangjinyun.cn/user-guide.html"><b>网页指南</b></a>
@@ -47,7 +48,7 @@
 
   <p><sub>Windows 推荐从 Microsoft Store 安装（支持自动更新）· Android 请下载 64 位 APK</sub></p>
   <p><sub>🌍 语言支持：完整支持 <b>简体中文</b>、<b>English</b>、<b>日本語</b>、<b>한국어</b>（德语、西语、法语等正在完善中）</sub></p>
-  
+
 </div>
 
 ---
@@ -163,8 +164,8 @@
 
 ## 🚀 快速开始
 
-1. **环境准备** 
-   
+1. **环境准备**
+
    确保已安装 Flutter 3.24+ / Dart 3.5+ 环境。运行以下命令检查配置：
    ```bash
    flutter doctor
@@ -187,7 +188,7 @@
    ```
 
 5. **配置 AI 服务** (可选)
-   
+
    在应用内进入「设置」→「AI 设置」，选择内置服务商模板（如 Ollama 云端、DeepSeek、OpenAI 等）填入 API Key 即可开启 AI 问答、Thoughter 智能体与洞察分析功能。
 
 ## 🗺️ 发展路线图

@@ -2,9 +2,9 @@
   <a href="https://note.shangjinyun.cn/">
     <img src="https://img.shangjinyun.cn/projects/thoughtecho/readme-banner-en.png" alt="ThoughtEcho - AI-Powered Inspiration Notebook" width="100%">
   </a>
-  
+
   # ThoughtEcho (心迹)
-  
+
   <p align="center">
     <b>📝 你的专属 AI 灵感摘录本 · 想到就记，读到就摘，剩下的交给 AI。</b><br>
     <b>Your Personal AI-Powered Inspiration Notebook — Jot it down, clip what you read, let AI sort out the rest.</b>
@@ -35,11 +35,12 @@
   </p>
 
   <p align="center">
-    <a href="README.md"><b>English</b></a> • 
+    <a href="README.md"><b>English</b></a> •
     <a href="README_CN.md"><b>简体中文</b></a> •
     <a href="README.zh-Hant.md"><b>繁體中文</b></a> •
     <a href="README_JA.md"><b>日本語</b></a> •
     <a href="README_KO.md"><b>한국어</b></a> •
+    <a href="README.tr.md"><b>Türkçe</b></a> •
     <a href="https://note.shangjinyun.cn/"><b>Official Website</b></a> •
     <a href="docs/USER_MANUAL.md"><b>User Manual</b></a> •
     <a href="https://note.shangjinyun.cn/user-guide.html"><b>Web Guide</b></a>
@@ -52,12 +53,12 @@
 
   <p><sub>Windows: Recommended from Microsoft Store (auto-update) · Android: Download APK from <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">GitHub Releases</a></sub></p>
   <p><sub>🌍 <b>Localization:</b> Full support for <b>English</b>, <b>简体中文</b>, <b>繁體中文</b>, <b>日本語</b>, and <b>한국어</b> (German, Spanish, French in progress)</sub></p>
-  
+
 </div>
 
 ---
 
-> **ThoughtEcho（心迹）** 是一款优雅、本地优先、AI 赋能的跨平台灵感笔记与知识摘录应用。  
+> **ThoughtEcho（心迹）** 是一款优雅、本地优先、AI 赋能的跨平台灵感笔记与知识摘录应用。
 > **ThoughtEcho** is an elegant, local-first, AI-powered cross-platform inspiration and quote notebook designed to capture fleeting thoughts, organize reading excerpts, and unlock deeper creative potential.
 
 ---
@@ -177,7 +178,7 @@
 ## 🚀 Quick Start
 
 1. **Prerequisites**
-   
+
    Ensure Flutter 3.29+ and Dart 3.5+ are installed. Run `flutter doctor` to verify your environment:
    ```bash
    flutter doctor
@@ -200,7 +201,7 @@
    ```
 
 5. **Configure AI Services (Optional)**
-   
+
    Navigate to **Settings → AI Settings**, choose an AI provider preset (e.g., DeepSeek, Ollama, OpenAI), paste your API Key, and start using AI Q&A, Thoughter agent, and periodic insights.
 
 ## 🗺️ Development Roadmap
