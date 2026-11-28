@@ -7,10 +7,16 @@
 `fontFamilyFallback` 里的具名字体根本没机会被查询——衬线在 iOS 上从未生效。
 
 随包字体把字体族变成一个一定解析得到的名字，同时让
-`ThemeStyleForm.readingWeightFloor` 从「下限 + 听设备的」变成精确取值。
+`ThemeStyleForm.bodyWeightFloor` 从「下限 + 听设备的」变成精确取值。
+
+默认收录范围：
+- GB2312 全量（简体中文常用汉字与符号）
+- Big5 一级常用字（繁体中文常用字，覆盖简中界面下记录繁体引文/人名/诗词的场景）
+- JIS X 0208 第一水准汉字（日文常用汉字，覆盖简中界面下摘录日文书名/歌词/引文的场景）
+- 拉丁补充/扩展、希腊/西里尔字母、平片假名与常用标点符号
 
 用法：
-    python3 scripts/fonts/build_serif_subset.py [--traditional]
+    python3 scripts/fonts/build_serif_subset.py [--no-traditional] [--no-japanese]
 
 输出 assets/fonts/NotoSerifSC-Subset.ttf。产物已签入仓库，**只有改字符集或换
 字体版本时才需要重跑**，日常构建不依赖本脚本。
@@ -29,7 +35,7 @@ from fontTools import subset as ft_subset
 from fontTools.varLib import instancer as ft_instancer
 
 # fonttools 默认把当前时间写进 head 表，同样的输入会产出不同的字节。产物是要签入
-# 仓库的，重跑一次就多一个无意义的 5MB diff——钉死时间戳让构建可复现。
+# 仓库的，重跑一次就多一个无意义的数 MB diff——钉死时间戳让构建可复现。
 os.environ.setdefault("SOURCE_DATE_EPOCH", "0")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -59,7 +65,10 @@ WEIGHT_RANGE = "wght=400:900"
 LAYOUT_FEATURES = "kern,liga,locl,ccmp,palt"
 
 
-def build_charset(include_traditional: bool) -> str:
+def build_charset(
+    include_traditional: bool = True,
+    include_japanese: bool = True,
+) -> str:
     chars: set[str] = set()
 
     # GB2312 全量：6763 个汉字 + 符号区，覆盖简体中文日常书写。
@@ -71,7 +80,7 @@ def build_charset(include_traditional: bool) -> str:
                 pass
 
     if include_traditional:
-        # Big5 常用字（一级字区 0xA440–0xC67E），覆盖繁体引文。
+        # Big5 常用字（一级字区 0xA440–0xC67E，5401 个常用繁体字），覆盖繁体引文与常见异体。
         for hi in range(0xA4, 0xC7):
             for lo in list(range(0x40, 0x7F)) + list(range(0xA1, 0xFF)):
                 try:
@@ -79,11 +88,23 @@ def build_charset(include_traditional: bool) -> str:
                 except UnicodeDecodeError:
                     pass
 
+    if include_japanese:
+        # JIS X 0208 第一水准汉字（EUC-JP 区位 16–47，对应首字节 0xB0–0xCF，共 2965 字），
+        # 覆盖日本常用汉字及新字体（如 選、運、動、駅、桜 等）；源字体中不存在的字形由
+        # fontTools subsetter 自动跳过（与源字体取交集）。
+        for hi in range(0xB0, 0xD0):
+            for lo in range(0xA1, 0xFF):
+                try:
+                    chars.add(bytes([hi, lo]).decode("euc_jp"))
+                except UnicodeDecodeError:
+                    pass
+
     # 应用支持 7 种界面语言（de/en/es/fr/ja/ko/zh），用户还会用任意语言记笔记。
     # 覆盖情况见下，**这不是随手划的范围**：
     #   - de / es / fr：重音字母全在拉丁补充区，下面第二条已覆盖；
-    #   - ja：假名 GB2312 自带了大半，这里补齐整块。日文汉字会用简体字形渲染，
-    #     这是用简体中文字体的固有代价，靠子集解决不了；
+    #   - zh-Hant / ja：在非简体界面下，ThemeStyleForm.forLocale() 会切换为各平台原生系统衬线体；
+    #     而在简体/英文等界面下记录繁体或日文摘录时，依赖默认收录的 Big5 一级 + JIS 一级汉字与完整假名，
+    #     避免句中出现“部分字命中随包宋体、部分字跌落系统黑体”的斑秃混排；
     #   - ko：**源字体根本不含谚文**（Noto Serif SC 的谚文音节数为 0），
     #     韩文一定会落到 fontFamilyFallback 的系统字体，这里加什么都没用；
     #   - ru / el：源字体只有 66 个西里尔字母和 49 个希腊字母，下面第二、三条
@@ -150,8 +171,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--traditional",
-        action="store_true",
-        help="额外收录 Big5 一级常用繁体字（体积约 +1.6MB）",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="收录 Big5 一级常用繁体字（默认开启，可用 --no-traditional 关闭）",
+    )
+    parser.add_argument(
+        "--japanese",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="收录 JIS X 0208 第一水准日文汉字（默认开启，可用 --no-japanese 关闭）",
     )
     parser.add_argument(
         "--work-dir",
@@ -174,11 +202,18 @@ def main() -> None:
         download(SOURCE_FONT_URL, source_font)
         download(SOURCE_LICENSE_URL, OUT_LICENSE)
 
-        charset = build_charset(args.traditional)
+        charset = build_charset(
+            include_traditional=args.traditional,
+            include_japanese=args.japanese,
+        )
         charset_file = work_dir / "charset.txt"
         charset_file.write_text(charset, encoding="utf-8")
-        print(f"字符集：{len(charset)} 个字符"
-              f"（{'含繁体' if args.traditional else '简体'}）")
+        tags = ["简体"]
+        if args.traditional:
+            tags.append("繁体")
+        if args.japanese:
+            tags.append("日文汉字")
+        print(f"字符集：{len(charset)} 个字符（{' + '.join(tags)}）")
 
         # 直接调 fontTools 的 Python API，不起子进程：pyftsubset / fonttools 是否在
         # PATH 上取决于安装方式，而且子进程那条路要么被静态分析盯上、要么得靠

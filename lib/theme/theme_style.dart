@@ -525,9 +525,11 @@ class ThemeStyleForm {
   /// 为目标 [locale] 解析适用的风格形式。
   ///
   /// 若当前风格指定了随包字体 [bundledSerif]，但在目标语言（如日文、繁体中文、韩文）下
-  /// 随包子集因字符集缺失会引发同一段落内的宋黑混排，则切换为各平台对应的系统衬线体
-  /// （Android 为 'serif'，iOS 为具名宋体/明朝体，Windows 为游明朝/新细明体），
-  /// 让系统字体管理器统一接管整段渲染，既杜绝局部斑秃混排，又在有系统字体的设备上呈现优美衬线排版。
+  /// 需要使用各平台原生系统衬线体（Android 为 'serif'，iOS 为具名宋体/明朝体，
+  /// Windows 为游明朝/新细明体），则切换为系统衬线体并同步将 [titleWeightFloor] /
+  /// [bodyWeightFloor] 归零：系统衬线体通常只有 Regular (400) 与 Bold (700) 两档静态字重，
+  /// 若保留针对随包可变字体调校的 w600/w700 下限，在系统字体上会触发跳粗或引擎假加粗，
+  /// 归零后回归系统自然字重层级。
   ThemeStyleForm forLocale(Locale? locale, {TargetPlatform? platform}) {
     if (fontFamily == null) return this;
     if (!isBundledSerifSupported(locale)) {
@@ -537,6 +539,8 @@ class ThemeStyleForm {
       return copyWith(
         fontFamily: () => systemSerif,
         fontFamilyFallback: () => systemFallback,
+        titleWeightFloor: 0,
+        bodyWeightFloor: 0,
       );
     }
     return this;
