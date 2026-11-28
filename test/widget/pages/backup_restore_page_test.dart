@@ -71,11 +71,11 @@ void main() {
     expect(find.text(l10n.backupScopeIncludedMedia), findsOneWidget);
     expect(find.text(l10n.backupScopeIncludedSettings), findsOneWidget);
     expect(find.text(l10n.backupScopeIncludedAiAnalyses), findsOneWidget);
+    expect(find.text(l10n.backupScopeIncludedChatsAndMemory), findsOneWidget);
 
     expect(find.text(l10n.backupScopeExcludedHeader), findsOneWidget);
     expect(find.text(l10n.backupScopeExcludedCredentials), findsOneWidget);
     expect(find.text(l10n.backupScopeExcludedDrafts), findsOneWidget);
-    expect(find.text(l10n.backupScopeExcludedChatsAndMemory), findsOneWidget);
     expect(find.text(l10n.backupScopeExcludedInsightsAndLogs), findsOneWidget);
     expect(find.text(l10n.backupScopeRestoreModeNote), findsOneWidget);
   });

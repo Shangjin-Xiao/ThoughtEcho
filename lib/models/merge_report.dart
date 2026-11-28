@@ -1,3 +1,96 @@
+import 'package:meta/meta.dart';
+
+/// AI 对话记录与 Thoughter 长期记忆的 LWW 合并统计（不可变）
+@immutable
+class AssistantSyncStats {
+  const AssistantSyncStats({
+    this.sessionsAdded = 0,
+    this.sessionsUpdated = 0,
+    this.sessionsDeleted = 0,
+    this.sessionsSkipped = 0,
+    this.messagesAdded = 0,
+    this.messagesUpdated = 0,
+    this.messagesDeleted = 0,
+    this.messagesSkipped = 0,
+    this.profilesAdded = 0,
+    this.profilesUpdated = 0,
+    this.profilesDeleted = 0,
+    this.factsAdded = 0,
+    this.factsUpdated = 0,
+    this.factsDeleted = 0,
+    this.slicesAdded = 0,
+    this.slicesUpdated = 0,
+    this.slicesDeleted = 0,
+    this.memorySkippedCount = 0,
+    this.memorySkippedBecauseDisabled = false,
+    this.errors = const <String>[],
+  });
+
+  final int sessionsAdded;
+  final int sessionsUpdated;
+  final int sessionsDeleted;
+  final int sessionsSkipped;
+  final int messagesAdded;
+  final int messagesUpdated;
+  final int messagesDeleted;
+  final int messagesSkipped;
+
+  final int profilesAdded;
+  final int profilesUpdated;
+  final int profilesDeleted;
+  final int factsAdded;
+  final int factsUpdated;
+  final int factsDeleted;
+  final int slicesAdded;
+  final int slicesUpdated;
+  final int slicesDeleted;
+  final int memorySkippedCount;
+  final bool memorySkippedBecauseDisabled;
+
+  final List<String> errors;
+
+  int get chatAdded => sessionsAdded + messagesAdded;
+  int get chatUpdated => sessionsUpdated + messagesUpdated;
+  int get chatDeleted => sessionsDeleted + messagesDeleted;
+  int get chatSkipped => sessionsSkipped + messagesSkipped;
+  bool get hasChatChanges =>
+      chatAdded > 0 || chatUpdated > 0 || chatDeleted > 0;
+
+  int get memoryAdded => profilesAdded + factsAdded + slicesAdded;
+  int get memoryUpdated => profilesUpdated + factsUpdated + slicesUpdated;
+  int get memoryDeleted => profilesDeleted + factsDeleted + slicesDeleted;
+  bool get hasMemoryChanges =>
+      memoryAdded > 0 || memoryUpdated > 0 || memoryDeleted > 0;
+
+  bool get hasChanges => hasChatChanges || hasMemoryChanges;
+  bool get hasErrors => errors.isNotEmpty;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'sessionsAdded': sessionsAdded,
+      'sessionsUpdated': sessionsUpdated,
+      'sessionsDeleted': sessionsDeleted,
+      'sessionsSkipped': sessionsSkipped,
+      'messagesAdded': messagesAdded,
+      'messagesUpdated': messagesUpdated,
+      'messagesDeleted': messagesDeleted,
+      'messagesSkipped': messagesSkipped,
+      'profilesAdded': profilesAdded,
+      'profilesUpdated': profilesUpdated,
+      'profilesDeleted': profilesDeleted,
+      'factsAdded': factsAdded,
+      'factsUpdated': factsUpdated,
+      'factsDeleted': factsDeleted,
+      'slicesAdded': slicesAdded,
+      'slicesUpdated': slicesUpdated,
+      'slicesDeleted': slicesDeleted,
+      'memorySkippedCount': memorySkippedCount,
+      'memorySkippedBecauseDisabled': memorySkippedBecauseDisabled,
+      'errors': errors,
+    };
+  }
+}
+
 /// 合并报告 - LWW 同步结果统计（扩展版）
 ///
 /// 新增字段：
@@ -49,6 +142,9 @@ class MergeReport {
   /// 源设备指纹（可选）
   final String? sourceDevice;
 
+  /// 对话与长期记忆的同步统计（可选）
+  final AssistantSyncStats? assistantStats;
+
   const MergeReport({
     @Deprecated('Use insertedQuotes and updatedQuotes instead')
     this.appliedQuotes = 0,
@@ -69,6 +165,7 @@ class MergeReport {
     required this.startTime,
     this.endTime,
     this.sourceDevice,
+    this.assistantStats,
   });
 
   /// 创建空的初始报告
@@ -178,6 +275,7 @@ class MergeReport {
     DateTime? startTime,
     DateTime? endTime,
     String? sourceDevice,
+    AssistantSyncStats? assistantStats,
   }) {
     return MergeReport(
       appliedQuotes: appliedQuotes ?? this.appliedQuotes,
@@ -199,6 +297,7 @@ class MergeReport {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       sourceDevice: sourceDevice ?? this.sourceDevice,
+      assistantStats: assistantStats ?? this.assistantStats,
     );
   }
 
@@ -253,6 +352,53 @@ class MergeReport {
     if (skippedEmptyQuotes > 0) {
       parts.add('跳过 $skippedEmptyQuotes 条正文为空的笔记');
     }
+
+    final assistant = assistantStats;
+    if (assistant != null) {
+      if (assistant.hasChatChanges) {
+        final chatParts = <String>[];
+        if (assistant.sessionsAdded > 0) {
+          chatParts.add('新增 ${assistant.sessionsAdded} 个会话');
+        }
+        if (assistant.sessionsUpdated > 0) {
+          chatParts.add('更新 ${assistant.sessionsUpdated} 个会话');
+        }
+        if (assistant.sessionsDeleted > 0) {
+          chatParts.add('删除 ${assistant.sessionsDeleted} 个会话');
+        }
+        if (assistant.messagesAdded > 0) {
+          chatParts.add('新增 ${assistant.messagesAdded} 条消息');
+        }
+        if (assistant.messagesUpdated > 0) {
+          chatParts.add('更新 ${assistant.messagesUpdated} 条消息');
+        }
+        if (assistant.messagesDeleted > 0) {
+          chatParts.add('删除 ${assistant.messagesDeleted} 条消息');
+        }
+        if (chatParts.isNotEmpty) {
+          parts.add('对话(${chatParts.join('/')})');
+        }
+      }
+
+      if (assistant.memorySkippedBecauseDisabled) {
+        parts.add('长期记忆因开关关闭已跳过');
+      } else if (assistant.hasMemoryChanges) {
+        final memoryParts = <String>[];
+        if (assistant.memoryAdded > 0) {
+          memoryParts.add('新增 ${assistant.memoryAdded}');
+        }
+        if (assistant.memoryUpdated > 0) {
+          memoryParts.add('更新 ${assistant.memoryUpdated}');
+        }
+        if (assistant.memoryDeleted > 0) {
+          memoryParts.add('删除 ${assistant.memoryDeleted}');
+        }
+        if (memoryParts.isNotEmpty) {
+          parts.add('长期记忆(${memoryParts.join('/')})');
+        }
+      }
+    }
+
     if (hasErrors) {
       parts.add('${errors.length} 个错误');
     }
@@ -302,6 +448,44 @@ class MergeReport {
       buffer.writeln('');
     }
 
+    final assistant = assistantStats;
+    if (assistant != null) {
+      buffer.writeln('对话统计:');
+      buffer.writeln(
+        '  会话(新增/更新/删除/跳过): '
+        '${assistant.sessionsAdded}/${assistant.sessionsUpdated}/'
+        '${assistant.sessionsDeleted}/${assistant.sessionsSkipped}',
+      );
+      buffer.writeln(
+        '  消息(新增/更新/删除/跳过): '
+        '${assistant.messagesAdded}/${assistant.messagesUpdated}/'
+        '${assistant.messagesDeleted}/${assistant.messagesSkipped}',
+      );
+      buffer.writeln('');
+
+      buffer.writeln('长期记忆统计:');
+      if (assistant.memorySkippedBecauseDisabled) {
+        buffer.writeln('  状态: 因本机长期记忆开关关闭已跳过');
+      } else {
+        buffer.writeln(
+          '  画像(新增/更新/删除): '
+          '${assistant.profilesAdded}/${assistant.profilesUpdated}/${assistant.profilesDeleted}',
+        );
+        buffer.writeln(
+          '  事实(新增/更新/删除): '
+          '${assistant.factsAdded}/${assistant.factsUpdated}/${assistant.factsDeleted}',
+        );
+        buffer.writeln(
+          '  近期切片(新增/更新/删除): '
+          '${assistant.slicesAdded}/${assistant.slicesUpdated}/${assistant.slicesDeleted}',
+        );
+        if (assistant.memorySkippedCount > 0) {
+          buffer.writeln('  跳过: ${assistant.memorySkippedCount}');
+        }
+      }
+      buffer.writeln('');
+    }
+
     if (hasErrors) {
       buffer.writeln('错误列表:');
       for (int i = 0; i < errors.length; i++) {
@@ -338,6 +522,7 @@ class MergeReport {
       'endTime': endTime?.toIso8601String(),
       'sourceDevice': sourceDevice,
       'durationMs': durationMs,
+      if (assistantStats != null) 'assistantStats': assistantStats!.toJson(),
     };
   }
 }

@@ -24,16 +24,61 @@ extension _ThoughterWorkflow on _ThoughterPageState {
     });
     _scrollToBottom();
 
-    await _ensureSessionCreated();
-    final sessionId = _currentSessionId!;
+    final submitGeneration = _sessionLoadGeneration;
+    await _ensureSessionCreated(
+      excludeMessageId: userMsg.id,
+      expectedGeneration: submitGeneration,
+    );
+    if (!mounted || _isDisposed || submitGeneration != _sessionLoadGeneration) {
+      return;
+    }
+    final sessionId = _currentSessionId;
+    if (sessionId == null) {
+      _rollbackUnsavedSubmittedMessage(userMsg.id, trimmed);
+      return;
+    }
     final shouldGenerateTitle = !(await _sessionHasUserMessages(sessionId));
-    await _chatSessionService.addMessage(sessionId, userMsg);
+    if (!mounted || _isDisposed || submitGeneration != _sessionLoadGeneration) {
+      return;
+    }
+    final persistedSessionId = await _persistMessageSafely(
+      userMsg,
+      preferredSessionId: sessionId,
+      originGeneration: submitGeneration,
+      surfaceError: true,
+    );
+    if (persistedSessionId == null) {
+      if (submitGeneration == _sessionLoadGeneration) {
+        _rollbackUnsavedSubmittedMessage(userMsg.id, trimmed);
+      }
+      return;
+    }
+    if (!mounted || _isDisposed || submitGeneration != _sessionLoadGeneration) {
+      return;
+    }
     if (shouldGenerateTitle) {
-      _generateAITitle(sessionId, trimmed);
+      _generateAITitle(persistedSessionId, trimmed);
     }
 
     _agentStatusDismissTimer?.cancel();
     await _askAgent(trimmed);
+  }
+
+  void _rollbackUnsavedSubmittedMessage(
+    String messageId,
+    String originalText,
+  ) {
+    if (!mounted || _isDisposed) return;
+    _setState(() {
+      _messages.removeWhere((m) => m.id == messageId);
+      _isLoading = false;
+    });
+    if (_textController.text.isEmpty) {
+      _textController.text = originalText;
+      _textController.selection = TextSelection.collapsed(
+        offset: originalText.length,
+      );
+    }
   }
 
   /// 跑一条只出 Markdown 正文的工作流（洞察、来源分析这类）。

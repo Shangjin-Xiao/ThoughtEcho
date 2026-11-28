@@ -151,6 +151,8 @@ class _TestWeatherService extends ChangeNotifier implements WeatherService {
 }
 
 class _InMemoryChatSessionService extends ChatSessionService {
+  _InMemoryChatSessionService() : super(openOwnDatabase: false);
+
   final Map<String, ChatSession> _sessions = <String, ChatSession>{};
   final Map<String, List<app_chat.ChatMessage>> _messages =
       <String, List<app_chat.ChatMessage>>{};
@@ -158,6 +160,14 @@ class _InMemoryChatSessionService extends ChatSessionService {
 
   @override
   Future<void> init() async {}
+
+  @override
+  Future<ChatSession?> tryCreateSession({
+    required String sessionType,
+    String? noteId,
+    required String title,
+  }) =>
+      createSession(sessionType: sessionType, noteId: noteId, title: title);
 
   @override
   Future<ChatSession> createSession({
@@ -182,14 +192,47 @@ class _InMemoryChatSessionService extends ChatSessionService {
   Future<ChatSession?> getLatestSessionForNote(String noteId) async => null;
 
   @override
+  Future<bool> tryAddMessage(
+    String sessionId,
+    app_chat.ChatMessage message,
+  ) async {
+    if (!_sessions.containsKey(sessionId)) return false;
+    final list =
+        _messages.putIfAbsent(sessionId, () => <app_chat.ChatMessage>[]);
+    final existingIdx = list.indexWhere((m) => m.id == message.id);
+    if (existingIdx >= 0) {
+      list[existingIdx] = message;
+    } else {
+      list.add(message);
+    }
+    return true;
+  }
+
+  @override
+  Future<bool> tryUpdateExistingMessage(
+    String sessionId,
+    app_chat.ChatMessage message,
+  ) async {
+    if (!_sessions.containsKey(sessionId)) return false;
+    final list = _messages[sessionId];
+    if (list == null) return false;
+    final existingIdx = list.indexWhere((m) => m.id == message.id);
+    if (existingIdx < 0) return false;
+    list[existingIdx] = message;
+    return true;
+  }
+
+  @override
   Future<void> addMessage(
     String sessionId,
     app_chat.ChatMessage message,
   ) async {
-    _messages
-        .putIfAbsent(sessionId, () => <app_chat.ChatMessage>[])
-        .add(message);
+    await tryAddMessage(sessionId, message);
   }
+
+  @override
+  Future<bool?> sessionExists(String sessionId) async =>
+      _sessions.containsKey(sessionId);
 
   @override
   Future<void> updateSessionTitle(String sessionId, String title) async {}
@@ -204,6 +247,16 @@ class _InMemoryChatSessionService extends ChatSessionService {
   Future<void> deleteSession(String sessionId) async {
     _sessions.remove(sessionId);
     _messages.remove(sessionId);
+  }
+
+  @override
+  Future<bool> deleteEmptySession(String sessionId) async {
+    if (!_sessions.containsKey(sessionId)) return false;
+    final hasUserMsg = _messages[sessionId]?.any((m) => m.isUser) ?? false;
+    if (hasUserMsg) return false;
+    _sessions.remove(sessionId);
+    _messages.remove(sessionId);
+    return true;
   }
 
   @override

@@ -18,6 +18,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 
 /// 备份与还原页面
@@ -308,6 +309,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             l10n.backupScopeIncludedAiAnalyses,
             bulletColor: semanticColors.success,
           ),
+          _buildScopeBullet(
+            l10n.backupScopeIncludedChatsAndMemory,
+            bulletColor: semanticColors.success,
+          ),
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
@@ -323,10 +328,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           ),
           _buildScopeBullet(
             l10n.backupScopeExcludedDrafts,
-            bulletColor: colorScheme.onSurfaceVariant,
-          ),
-          _buildScopeBullet(
-            l10n.backupScopeExcludedChatsAndMemory,
             bulletColor: colorScheme.onSurfaceVariant,
           ),
           _buildScopeBullet(
@@ -755,6 +756,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           },
           cancelToken: _cancelToken,
         );
+        if (mounted) {
+          AppTheme? appTheme;
+          try {
+            appTheme = Provider.of<AppTheme>(context, listen: false);
+          } on ProviderNotFoundException {
+            appTheme = AppTheme.currentInstance;
+          }
+          await appTheme?.reloadFromStorage();
+        }
       }
 
       if (report != null) {

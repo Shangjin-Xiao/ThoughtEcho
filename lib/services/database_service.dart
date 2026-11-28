@@ -335,6 +335,19 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   /// 获取指定分类下未删除笔记的总数（用于同步冲突笔记计数等场景）
   Future<int> getNotesCountByCategory(String categoryId);
 
+  /// 获取当前未删除笔记的最大有效修改时间（UTC ISO-8601）与未删除笔记总数，
+  /// 供 Dreaming 记录归纳依据及同步收敛判定“看全了”使用。
+  Future<({String? watermark, int noteCount})> getActiveNotesBasis();
+
+  /// 统计有效修改时间（`last_modified` 非空优先，否则回退 `date`）不晚于 [watermark]
+  /// 的未删除笔记总数。
+  Future<int> countActiveNotesUpToWatermark(String watermark);
+
+  /// 批量统计多个水位时间点各自对应的未删除笔记总数（单次扫描 `quotes` 表，避免循环查询）。
+  Future<Map<String, int>> countActiveNotesUpToWatermarks(
+    Iterable<String> watermarks,
+  );
+
   /// 获取墓碑记录用于备份同步（永久删除的笔记 ID 列表）
   Future<List<Map<String, dynamic>>> getTombstonesForBackup();
 

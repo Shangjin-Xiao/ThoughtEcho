@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/chat_message.dart';
 import 'package:thoughtecho/models/chat_session.dart';
+import 'package:thoughtecho/utils/lww_utils.dart';
 
 void main() {
   group('ChatSession.fromMap', () {
@@ -97,8 +98,15 @@ void main() {
       expect(map['session_type'], equals('note'));
       expect(map['note_id'], equals('note-1'));
       expect(map['title'], equals('Map测试'));
-      expect(map['created_at'], equals(createdAt.toIso8601String()));
-      expect(map['last_active_at'], equals(lastActiveAt.toIso8601String()));
+      expect(map['created_at'], equals(LWWUtils.formatFixedUtcIso(createdAt)));
+      expect(
+        map['last_active_at'],
+        equals(LWWUtils.formatFixedUtcIso(lastActiveAt)),
+      );
+      expect(
+        map['updated_at'],
+        equals(LWWUtils.formatFixedUtcIso(lastActiveAt)),
+      );
       expect(map['is_pinned'], equals(1));
     });
 
@@ -238,13 +246,74 @@ void main() {
       expect(json['sessionType'], equals('note'));
       expect(json['noteId'], equals('note-to-json'));
       expect(json['title'], equals('ToJson Test'));
-      expect(json['createdAt'], equals(createdAt.toIso8601String()));
-      expect(json['lastActiveAt'], equals(lastActiveAt.toIso8601String()));
+      expect(json['createdAt'], equals(LWWUtils.formatFixedUtcIso(createdAt)));
+      expect(
+        json['lastActiveAt'],
+        equals(LWWUtils.formatFixedUtcIso(lastActiveAt)),
+      );
       expect(json['isPinned'], isTrue);
       expect(json['messages'], isA<List>());
       final messagesList = json['messages'] as List;
       expect(messagesList.length, equals(1));
       expect(messagesList[0]['id'], equals('msg-to-json'));
+      expect(
+        messagesList[0]['timestamp'],
+        equals(LWWUtils.formatFixedUtcIso(createdAt)),
+      );
+    });
+
+    test('toMap 与 toJson 应将所有时间字段统一为 6 位微秒定宽 UTC ISO 格式', () {
+      final createdAt = DateTime.utc(2026, 4, 10, 8, 5, 3, 12);
+      final lastActiveAt = DateTime.utc(2026, 4, 10, 9, 6, 4, 12, 34);
+      final updatedAt = DateTime(2026, 4, 10, 10, 7, 5, 500);
+      final msg = ChatMessage(
+        id: 'msg-utc-fixed',
+        content: 'UTC check',
+        isUser: true,
+        timestamp: createdAt,
+        updatedAt: updatedAt,
+      );
+      final session = ChatSession(
+        id: 'session-utc-fixed',
+        sessionType: 'agent',
+        title: 'UTC Check',
+        createdAt: createdAt,
+        lastActiveAt: lastActiveAt,
+        updatedAt: updatedAt,
+        messages: [msg],
+      );
+
+      final sessionMap = session.toMap();
+      final sessionJson = session.toJson();
+      final msgMap = msg.toMap(session.id);
+      final msgJson = msg.toJson();
+
+      expect(sessionMap['created_at'], '2026-04-10T08:05:03.012000Z');
+      expect(sessionMap['last_active_at'], '2026-04-10T09:06:04.012034Z');
+      expect(sessionMap['updated_at'], LWWUtils.formatFixedUtcIso(updatedAt));
+      expect(sessionJson['createdAt'], '2026-04-10T08:05:03.012000Z');
+      expect(sessionJson['lastActiveAt'], '2026-04-10T09:06:04.012034Z');
+      expect(sessionJson['updatedAt'], LWWUtils.formatFixedUtcIso(updatedAt));
+
+      expect(msgMap['created_at'], '2026-04-10T08:05:03.012000Z');
+      expect(msgMap['updated_at'], LWWUtils.formatFixedUtcIso(updatedAt));
+      expect(msgJson['timestamp'], '2026-04-10T08:05:03.012000Z');
+      expect(msgJson['updatedAt'], LWWUtils.formatFixedUtcIso(updatedAt));
+
+      for (final raw in <Object?>[
+        sessionMap['created_at'],
+        sessionMap['last_active_at'],
+        sessionMap['updated_at'],
+        sessionJson['createdAt'],
+        sessionJson['lastActiveAt'],
+        sessionJson['updatedAt'],
+        msgMap['created_at'],
+        msgMap['updated_at'],
+        msgJson['timestamp'],
+        msgJson['updatedAt'],
+      ]) {
+        expect(LWWUtils.isCanonicalFixedUtcIso(raw), isTrue, reason: '$raw');
+      }
     });
   });
 

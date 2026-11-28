@@ -869,5 +869,46 @@ void main() {
       expect(ChatSessionService.safeParseIntForTest('NaN', 0), 0);
       expect(ChatSessionService.safeParseIntForTest('Infinity', 0), 0);
     });
+
+    test('tryCreateSession 在底层数据库写入失败时返回 null 且不触发 notifyListeners', () async {
+      final db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+      final service = ChatSessionService(openOwnDatabase: false);
+      var notifyCount = 0;
+      service.addListener(() => notifyCount++);
+      try {
+        // 未建 chat_sessions 表，写入必然触发真实 SQLite DatabaseException
+        service.setDatabase(db);
+        final failed = await service.tryCreateSession(
+          sessionType: 'agent',
+          title: '写入失败会话',
+        );
+        expect(failed, isNull);
+        expect(notifyCount, 0);
+
+        // 恢复表结构后再次调用应正常落库并通知监听者
+        await db.execute('''
+          CREATE TABLE chat_sessions (
+            id TEXT PRIMARY KEY,
+            session_type TEXT NOT NULL,
+            note_id TEXT,
+            title TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_active_at TEXT NOT NULL,
+            updated_at TEXT,
+            is_pinned INTEGER DEFAULT 0
+          )
+        ''');
+        final created = await service.tryCreateSession(
+          sessionType: 'agent',
+          title: '恢复后正常会话',
+        );
+        expect(created, isNotNull);
+        expect(notifyCount, 1);
+        expect(await service.sessionExists(created!.id), isTrue);
+      } finally {
+        await service.close();
+        await db.close();
+      }
+    });
   });
 }

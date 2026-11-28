@@ -10,6 +10,8 @@ extension _ThoughterAgent on _ThoughterPageState {
 
     final l10n = AppLocalizations.of(context);
     final requestGeneration = ++_agentRequestGeneration;
+    final agentSessionGeneration = _sessionLoadGeneration;
+    final agentInitialSessionId = _currentSessionId;
     StreamSubscription<AgentEvent>? eventSubscription;
 
     // 带元数据的消息（工具轨迹、提案卡片）以前被整条排除，导致 agent 完全
@@ -82,9 +84,17 @@ extension _ThoughterAgent on _ThoughterPageState {
           isLoading: false,
         );
         _messages[index] = finalized;
-        if (_currentSessionId != null) {
+        final sessionId = agentInitialSessionId ??
+            (agentSessionGeneration == _sessionLoadGeneration
+                ? _currentSessionId
+                : null);
+        if (sessionId != null) {
           unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, finalized),
+            _persistMessageSafely(
+              finalized,
+              preferredSessionId: sessionId,
+              originGeneration: agentSessionGeneration,
+            ),
           );
         }
       });
@@ -109,9 +119,17 @@ extension _ThoughterAgent on _ThoughterPageState {
           state: app_chat.MessageState.error,
         );
         _messages[index] = failed;
-        if (_currentSessionId != null) {
+        final sessionId = agentInitialSessionId ??
+            (agentSessionGeneration == _sessionLoadGeneration
+                ? _currentSessionId
+                : null);
+        if (sessionId != null) {
           unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, failed),
+            _persistMessageSafely(
+              failed,
+              preferredSessionId: sessionId,
+              originGeneration: agentSessionGeneration,
+            ),
           );
         }
       });
@@ -139,6 +157,8 @@ extension _ThoughterAgent on _ThoughterPageState {
                 inProgress: toolProgressInProgress,
                 thinkingText: toolThinkingText,
                 modelLabel: turnModelLabel,
+                preferredSessionId: agentInitialSessionId,
+                originGeneration: agentSessionGeneration,
               );
             }
           case AgentReasoningDeltaEvent():
@@ -160,6 +180,8 @@ extension _ThoughterAgent on _ThoughterPageState {
               inProgress: true,
               thinkingText: toolThinkingText,
               modelLabel: turnModelLabel,
+              preferredSessionId: agentInitialSessionId,
+              originGeneration: agentSessionGeneration,
             );
           case AgentTextDeltaEvent():
             if (toolProgressMsgId != null && toolProgressInProgress) {
@@ -170,6 +192,8 @@ extension _ThoughterAgent on _ThoughterPageState {
                 inProgress: false,
                 thinkingText: toolThinkingText,
                 modelLabel: turnModelLabel,
+                preferredSessionId: agentInitialSessionId,
+                originGeneration: agentSessionGeneration,
               );
             }
             if (streamingMsgId == null) {
@@ -225,6 +249,8 @@ extension _ThoughterAgent on _ThoughterPageState {
               inProgress: true,
               thinkingText: toolThinkingText,
               modelLabel: turnModelLabel,
+              preferredSessionId: agentInitialSessionId,
+              originGeneration: agentSessionGeneration,
             );
 
           case AgentToolCallResultEvent():
@@ -252,6 +278,8 @@ extension _ThoughterAgent on _ThoughterPageState {
                 inProgress: toolProgressInProgress,
                 thinkingText: toolThinkingText,
                 modelLabel: turnModelLabel,
+                preferredSessionId: agentInitialSessionId,
+                originGeneration: agentSessionGeneration,
               );
             }
 
@@ -272,6 +300,8 @@ extension _ThoughterAgent on _ThoughterPageState {
                 inProgress: false,
                 thinkingText: toolThinkingText,
                 modelLabel: turnModelLabel,
+                preferredSessionId: agentInitialSessionId,
+                originGeneration: agentSessionGeneration,
               );
             }
 
@@ -293,6 +323,8 @@ extension _ThoughterAgent on _ThoughterPageState {
                 inProgress: false,
                 thinkingText: toolThinkingText,
                 modelLabel: turnModelLabel,
+                preferredSessionId: agentInitialSessionId,
+                originGeneration: agentSessionGeneration,
               );
             }
         }
@@ -310,8 +342,13 @@ extension _ThoughterAgent on _ThoughterPageState {
         _pendingAskUserCompleter = completer;
 
         final msgId = _uuid.v4();
+        final capturedAskSessionId = agentInitialSessionId ??
+            (agentSessionGeneration == _sessionLoadGeneration
+                ? _currentSessionId
+                : null);
         _pendingAskUserMessageId = msgId;
-        _pendingAskUserSessionId = _currentSessionId;
+        _pendingAskUserSessionId = capturedAskSessionId;
+        _pendingAskUserGeneration = agentSessionGeneration;
 
         final askMsg = app_chat.ChatMessage(
           id: msgId,
@@ -348,7 +385,12 @@ extension _ThoughterAgent on _ThoughterPageState {
         );
 
         _pendingAskUserMessage = askMsg;
-        _appendMessage(askMsg, persist: true);
+        _pendingAskUserInitialPersistFuture = _appendMessage(
+          askMsg,
+          persist: true,
+          preferredSessionId: capturedAskSessionId,
+          originGeneration: agentSessionGeneration,
+        );
         _scrollToBottom();
 
         return completer.future;
@@ -390,8 +432,13 @@ extension _ThoughterAgent on _ThoughterPageState {
         if (streamingMsgId != null) {
           final idx = _messages.indexWhere((m) => m.id == streamingMsgId);
           if (idx != -1) {
-            _updateMessage(streamingMsgId!, parsed.displayText,
-                isLoading: false);
+            _updateMessage(
+              streamingMsgId!,
+              parsed.displayText,
+              isLoading: false,
+              preferredSessionId: agentInitialSessionId,
+              originGeneration: agentSessionGeneration,
+            );
           } else {
             _appendMessage(
               app_chat.ChatMessage(
@@ -402,6 +449,8 @@ extension _ThoughterAgent on _ThoughterPageState {
                 timestamp: DateTime.now(),
               ),
               persist: true,
+              preferredSessionId: agentInitialSessionId,
+              originGeneration: agentSessionGeneration,
             );
           }
         } else {
@@ -414,6 +463,8 @@ extension _ThoughterAgent on _ThoughterPageState {
               timestamp: DateTime.now(),
             ),
             persist: true,
+            preferredSessionId: agentInitialSessionId,
+            originGeneration: agentSessionGeneration,
           );
         }
       } else if (streamingMsgId != null) {
@@ -461,7 +512,15 @@ extension _ThoughterAgent on _ThoughterPageState {
           }),
         );
         _setState(() => _messages.add(cardMsg));
-        await _chatSessionService.addMessage(_currentSessionId!, cardMsg);
+        await _persistMessageSafely(
+          cardMsg,
+          preferredSessionId: agentInitialSessionId ??
+              (agentSessionGeneration == _sessionLoadGeneration
+                  ? _currentSessionId
+                  : null),
+          originGeneration: agentSessionGeneration,
+          surfaceError: true,
+        );
       }
 
       _scrollToBottom(bypassThrottle: true);
@@ -498,6 +557,8 @@ extension _ThoughterAgent on _ThoughterPageState {
             inProgress: false,
             thinkingText: toolThinkingText,
             modelLabel: turnModelLabel,
+            preferredSessionId: agentInitialSessionId,
+            originGeneration: agentSessionGeneration,
           );
         }
         _finishLoading();
@@ -530,6 +591,8 @@ extension _ThoughterAgent on _ThoughterPageState {
     required bool inProgress,
     String? thinkingText,
     String? modelLabel,
+    String? preferredSessionId,
+    int? originGeneration,
   }) {
     // 思考增量走的是 50ms 节流，工具开始/结束和「已经开始回答了」走的是直接写。
     // 不作废队列里那条旧的思考快照，它会在直接写之后才落地，把 inProgress 顶回
@@ -567,8 +630,19 @@ extension _ThoughterAgent on _ThoughterPageState {
       _messages[idx] = updatedMsg;
 
       // 保存到数据库（完成时持久化最终状态）
-      if (!inProgress && _currentSessionId != null) {
-        _chatSessionService.addMessage(_currentSessionId!, updatedMsg);
+      final effectiveGeneration = originGeneration ?? _sessionLoadGeneration;
+      final sessionId = preferredSessionId ??
+          (effectiveGeneration == _sessionLoadGeneration
+              ? _currentSessionId
+              : null);
+      if (!inProgress && sessionId != null) {
+        unawaited(
+          _persistMessageSafely(
+            updatedMsg,
+            preferredSessionId: sessionId,
+            originGeneration: effectiveGeneration,
+          ),
+        );
       }
     });
     _scrollToBottom();
@@ -889,11 +963,18 @@ extension _ThoughterAgent on _ThoughterPageState {
         metaJson: jsonEncode(updatedMeta),
       );
     }
+    final effectiveGeneration =
+        (isPending ? _pendingAskUserGeneration : null) ??
+            _sessionLoadGeneration;
     final effectiveSessionId = (isPending ? _pendingAskUserSessionId : null) ??
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
     if (effectiveSessionId != null && updated != null) {
       unawaited(
-        _chatSessionService.addMessage(effectiveSessionId, updated),
+        _persistMessageSafely(
+          updated,
+          preferredSessionId: effectiveSessionId,
+          originGeneration: effectiveGeneration,
+        ),
       );
     }
     if (mounted && !_isDisposed && updated != null) {
@@ -908,7 +989,9 @@ extension _ThoughterAgent on _ThoughterPageState {
       _pendingAskUserCompleter = null;
       _pendingAskUserMessageId = null;
       _pendingAskUserSessionId = null;
+      _pendingAskUserGeneration = null;
       _pendingAskUserMessage = null;
+      _pendingAskUserInitialPersistFuture = null;
     }
   }
 

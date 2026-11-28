@@ -8,6 +8,7 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/pages/agent_memory/agent_memory_card.dart';
 import 'package:thoughtecho/pages/agent_memory/agent_memory_page.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
@@ -1152,6 +1153,95 @@ void main() {
       expect(find.byType(AppEmptyView), findsNothing);
       expect(find.text('暂无匹配的记忆'), findsOneWidget);
       expect(find.text('尝试使用其他关键词或检查拼写'), findsOneWidget);
+    });
+
+    testWidgets('回归防护：从 Map/DB 反序列化的 UTC 时间戳在画像、事实与近期状态卡片中统一按本地时区日期展示',
+        (tester) async {
+      _setLargeSurfaceSize(tester);
+
+      // 选取在任意非零偏移本地时区下均跨越午夜日期边界的 UTC 时间戳：
+      // - 负偏移时区（如 UTC-8）：2026-11-20T00:30:00Z -> 本地为 2026-11-19
+      // - 正偏移时区（如 UTC+8）：2026-11-19T23:30:00Z -> 本地为 2026-11-20
+      final probeOffset = DateTime(2026, 11, 20, 12).timeZoneOffset;
+      final utcRecorded = probeOffset > Duration.zero
+          ? DateTime.utc(2026, 11, 19, 23, 30)
+          : DateTime.utc(2026, 11, 20, 0, 30);
+
+      String formatYmd(DateTime dt) {
+        final m = dt.month.toString().padLeft(2, '0');
+        final d = dt.day.toString().padLeft(2, '0');
+        return '${dt.year}-$m-$d';
+      }
+
+      final rawUtcYmd = formatYmd(utcRecorded);
+      final expectedLocalYmd = formatYmd(utcRecorded.toLocal());
+      if (probeOffset != Duration.zero) {
+        expect(expectedLocalYmd, isNot(rawUtcYmd));
+      }
+
+      final profileFromDb = AgentMemoryProfileEntry.fromMap(<String, Object?>{
+        'id': 'prof_utc_card',
+        'kind': 'preference',
+        'directive': '卡片本地日期验证偏好',
+        'observed_at': utcRecorded.toIso8601String(),
+        'updated_at': utcRecorded.toIso8601String(),
+        'status': 'active',
+        'source': 'explicit',
+      });
+      final factFromDb = AgentMemoryFact.fromMap(<String, Object?>{
+        'id': 'fact_utc_card',
+        'category': 'study',
+        'content': '卡片本地日期验证事实',
+        'importance': 6,
+        'created_at': utcRecorded.toIso8601String(),
+        'updated_at': utcRecorded.toIso8601String(),
+        'recall_count': 0,
+      });
+      final sliceFromDb = AgentMemoryRecentSlice.fromMap(<String, Object?>{
+        'id': 'slice_utc_card',
+        'content': '卡片本地日期验证近况',
+        'observed_at': utcRecorded.toIso8601String(),
+        'expires_at':
+            utcRecorded.add(const Duration(days: 14)).toIso8601String(),
+      });
+
+      expect(profileFromDb.observedAt.isUtc, isTrue);
+      expect(factFromDb.createdAt.isUtc, isTrue);
+      expect(sliceFromDb.observedAt.isUtc, isTrue);
+
+      await tester.pumpWidget(
+        _buildWrapper(
+          child: Scaffold(
+            body: ListView(
+              children: <Widget>[
+                ProfileEntryCard(
+                  entry: profileFromDb,
+                  onEdit: () {},
+                  onForget: () {},
+                ),
+                FactCard(
+                  fact: factFromDb,
+                  onForget: () {},
+                ),
+                RecentSliceCard(
+                  slice: sliceFromDb,
+                  onForget: () {},
+                ),
+              ],
+            ),
+          ),
+          settingsService: settingsService,
+          memoryService: memoryService,
+          databaseService: fakeDb,
+          disableAnimations: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(expectedLocalYmd), findsNWidgets(3));
+      if (probeOffset != Duration.zero) {
+        expect(find.text(rawUtcYmd), findsNothing);
+      }
     });
   });
 }

@@ -183,6 +183,12 @@ class _ThoughterPageState extends State<ThoughterPage>
   double _lastMessageViewportHeight = 0;
   bool _isDisposed = false;
   bool _agentListenerAttached = false;
+  bool _chatSessionListenerAttached = false;
+  bool _handlingRemoteSessionCheck = false;
+  Future<String?>? _rebuildingDeletedSessionFuture;
+  final Map<String, ({String replacementSessionId, int maxOriginGeneration})>
+      _replacedDeletedSessionIds =
+      <String, ({String replacementSessionId, int maxOriginGeneration})>{};
   bool _settingsListenerAttached = false;
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
@@ -190,7 +196,9 @@ class _ThoughterPageState extends State<ThoughterPage>
   Completer<AskUserResponse>? _pendingAskUserCompleter;
   String? _pendingAskUserMessageId;
   String? _pendingAskUserSessionId;
+  int? _pendingAskUserGeneration;
   app_chat.ChatMessage? _pendingAskUserMessage;
+  Future<String?>? _pendingAskUserInitialPersistFuture;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
   /// 流式文本 UI 的刷新间隔上限：一个窗口内最多落地一次。
@@ -281,6 +289,8 @@ class _ThoughterPageState extends State<ThoughterPage>
   bool _pendingToolProgressInProgress = false;
   String? _pendingToolProgressThinkingText;
   String? _pendingToolProgressModelLabel;
+  String? _pendingToolProgressSessionId;
+  int? _pendingToolProgressGeneration;
 
   void _scheduleToolProgressUpdate(
     String msgId,
@@ -288,6 +298,8 @@ class _ThoughterPageState extends State<ThoughterPage>
     required bool inProgress,
     String? thinkingText,
     String? modelLabel,
+    String? preferredSessionId,
+    int? originGeneration,
   }) {
     _pendingToolProgressMsgId = msgId;
     _pendingToolItems = items;
@@ -296,6 +308,8 @@ class _ThoughterPageState extends State<ThoughterPage>
     if (modelLabel != null && modelLabel.trim().isNotEmpty) {
       _pendingToolProgressModelLabel = modelLabel.trim();
     }
+    _pendingToolProgressSessionId = preferredSessionId;
+    _pendingToolProgressGeneration = originGeneration;
 
     if (_toolProgressThrottleTimer?.isActive ?? false) return;
 
@@ -314,6 +328,8 @@ class _ThoughterPageState extends State<ThoughterPage>
     final inProgress = _pendingToolProgressInProgress;
     final thinkingText = _pendingToolProgressThinkingText;
     final modelLabel = _pendingToolProgressModelLabel;
+    final preferredSessionId = _pendingToolProgressSessionId;
+    final originGeneration = _pendingToolProgressGeneration;
     // 同 _flushStreamUpdate：落地前先摘掉待写状态。
     _cancelToolProgressUpdate();
     _updateToolProgressMessage(
@@ -322,6 +338,8 @@ class _ThoughterPageState extends State<ThoughterPage>
       inProgress: inProgress,
       thinkingText: thinkingText,
       modelLabel: modelLabel,
+      preferredSessionId: preferredSessionId,
+      originGeneration: originGeneration,
     );
   }
 
@@ -330,6 +348,8 @@ class _ThoughterPageState extends State<ThoughterPage>
     _toolProgressThrottleTimer = null;
     _pendingToolProgressMsgId = null;
     _pendingToolProgressModelLabel = null;
+    _pendingToolProgressSessionId = null;
+    _pendingToolProgressGeneration = null;
   }
   // ==================== 性能优化结束 ====================
 
@@ -438,20 +458,40 @@ class _ThoughterPageState extends State<ThoughterPage>
   @visibleForTesting
   void debugCancelPendingAskUserForTest() => _cancelPendingAskUser();
 
-  void _appendMessage(app_chat.ChatMessage message, {bool persist = false}) {
+  @visibleForTesting
+  Future<void> debugStartNewChatForTest() => _startNewChat();
+
+  Future<String?>? _appendMessage(
+    app_chat.ChatMessage message, {
+    bool persist = false,
+    String? preferredSessionId,
+    int? originGeneration,
+  }) {
     _setState(() {
       _messages.add(message);
     });
+    Future<String?>? persistFuture;
     if (persist) {
-      if (_currentSessionId != null) {
-        unawaited(_chatSessionService.addMessage(_currentSessionId!, message));
-      } else {
+      final effectiveGeneration = originGeneration ?? _sessionLoadGeneration;
+      final sessionId = preferredSessionId ??
+          (effectiveGeneration == _sessionLoadGeneration
+              ? _currentSessionId
+              : null);
+      if (sessionId != null) {
+        persistFuture = _persistMessageSafely(
+          message,
+          preferredSessionId: sessionId,
+          originGeneration: effectiveGeneration,
+        );
+        unawaited(persistFuture);
+      } else if (effectiveGeneration == _sessionLoadGeneration) {
         // 会话要到首条用户消息才建。挂起等 _ensureSessionCreated 补写，
         // 否则开场白这类先于会话出现的消息会被静默丢掉。
         _pendingPersistMessages.add(message);
       }
     }
     _scrollToBottom();
+    return persistFuture;
   }
 
   void _updateMessage(
@@ -461,6 +501,8 @@ class _ThoughterPageState extends State<ThoughterPage>
     String? metaJson,
     app_chat.MessageState? state,
     List<String>? thinkingChunks,
+    String? preferredSessionId,
+    int? originGeneration,
   }) {
     // 直接写覆盖节流队列里还没落地的那次更新。否则一次「定稿」写完 isLoading=false
     // 之后，50ms 内攒下的旧快照会晚一步落地，把 isLoading 又推回 true——正文末尾
@@ -478,9 +520,19 @@ class _ThoughterPageState extends State<ThoughterPage>
         thinkingChunks: thinkingChunks,
       );
       _messages[idx] = updatedMsg;
-      if (!isLoading && _currentSessionId != null) {
+      final effectiveGeneration = originGeneration ?? _sessionLoadGeneration;
+      final sessionId = preferredSessionId ??
+          (effectiveGeneration == _sessionLoadGeneration
+              ? _currentSessionId
+              : null);
+      if (!isLoading && sessionId != null) {
         unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, updatedMsg));
+          _persistMessageSafely(
+            updatedMsg,
+            preferredSessionId: sessionId,
+            originGeneration: effectiveGeneration,
+          ),
+        );
       }
       // 这里不碰 _isLoading：单条消息定稿 ≠ 这一轮结束。Agent 一轮里可能定稿
       // 多条消息（旁白、工具面板、最终回答），任何一条把整页判成「不在生成」，
@@ -611,13 +663,24 @@ class _ThoughterPageState extends State<ThoughterPage>
       }
     }
 
-    // 会话校验与消息持久化：与 UI 更新严格分开，校验所属会话防止串写
+    // 会话校验与消息持久化：与 UI 更新严格分开，即使在页面退出销毁路径中也把取消元数据落入既有原会话
+    final effectiveGeneration =
+        (isTargetPending ? _pendingAskUserGeneration : null) ??
+            _sessionLoadGeneration;
     final effectiveSessionId = targetSessionId ??
         (isTargetPending ? _pendingAskUserSessionId : null) ??
         (_messagesSessionId == _currentSessionId ? _currentSessionId : null);
+    final initialPersistFuture =
+        isTargetPending ? _pendingAskUserInitialPersistFuture : null;
     if (effectiveSessionId != null && updated != null) {
       unawaited(
-        _chatSessionService.addMessage(effectiveSessionId, updated),
+        _persistCancelledAskUserMessage(
+          updated,
+          sessionId: effectiveSessionId,
+          originGeneration: effectiveGeneration,
+          allowLiveRebuild: updateUi && mounted && !_isDisposed,
+          initialPersistFuture: initialPersistFuture,
+        ),
       );
     }
 
@@ -631,7 +694,9 @@ class _ThoughterPageState extends State<ThoughterPage>
       _pendingAskUserCompleter = null;
       _pendingAskUserMessageId = null;
       _pendingAskUserSessionId = null;
+      _pendingAskUserGeneration = null;
       _pendingAskUserMessage = null;
+      _pendingAskUserInitialPersistFuture = null;
     }
 
     // UI 更新：销毁路径或非挂载时安全跳过

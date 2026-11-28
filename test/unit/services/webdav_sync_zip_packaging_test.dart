@@ -92,4 +92,58 @@ void main() {
       inputStream.closeSync();
     }
   });
+
+  test('JSON 输入超过 32 MiB 上限时 packSyncZip 前置抛出 StateError 且不残留超限压缩包', () async {
+    final jsonPath = '${tempDir.path}/oversized.json';
+    final zipPath = '${tempDir.path}/oversized.zip';
+    final sink = File(jsonPath).openWrite();
+    sink.write('{"pad":"');
+    final chunk = 'a' * (1024 * 1024);
+    for (var i = 0; i < 33; i++) {
+      sink.write(chunk);
+    }
+    sink.write('"}');
+    await sink.flush();
+    await sink.close();
+
+    await expectLater(
+      WebDAVSyncService.packSyncZip(jsonPath, zipPath),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('32 MiB'),
+        ),
+      ),
+    );
+    expect(await File(zipPath).exists(), isFalse);
+  });
+
+  test('packSyncZip(deterministic: true) 在源文件修改时间变化时仍产出逐字节一致的压缩包', () async {
+    const rawJson = '{"format":1,"messages":[{"id":"m1","content":"恒定分片内容"}]}';
+    final jsonA = File('${tempDir.path}/shard_a.json');
+    final jsonB = File('${tempDir.path}/shard_b.json');
+    final zipA = '${tempDir.path}/shard_a.zip';
+    final zipB = '${tempDir.path}/shard_b.zip';
+
+    await jsonA.writeAsString(rawJson);
+    await jsonA.setLastModified(DateTime.utc(2024, 3, 10, 8, 0, 0));
+    await WebDAVSyncService.packSyncZip(
+      jsonA.path,
+      zipA,
+      deterministic: true,
+    );
+
+    await jsonB.writeAsString(rawJson);
+    await jsonB.setLastModified(DateTime.utc(2026, 11, 21, 15, 30, 45));
+    await WebDAVSyncService.packSyncZip(
+      jsonB.path,
+      zipB,
+      deterministic: true,
+    );
+
+    final bytesA = await File(zipA).readAsBytes();
+    final bytesB = await File(zipB).readAsBytes();
+    expect(bytesB, equals(bytesA));
+  });
 }

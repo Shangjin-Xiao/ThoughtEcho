@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:meta/meta.dart';
 
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/lww_utils.dart';
 
 /// 消息状态枚举 - 追踪消息的生成过程
 enum MessageState {
@@ -25,6 +26,7 @@ class ChatMessage {
   final bool isUser;
   final String role; // 'user' | 'assistant' | 'system' | 'tool'
   final DateTime timestamp;
+  final DateTime? updatedAt;
   final bool isLoading;
   final bool includedInContext; // 是否纳入 AI 上下文
   final String? metaJson; // 扩展元数据（Phase 2 tool_call 等）
@@ -74,6 +76,7 @@ class ChatMessage {
     required this.isUser,
     String? role,
     required this.timestamp,
+    this.updatedAt,
     this.isLoading = false,
     this.includedInContext = true,
     this.metaJson,
@@ -92,13 +95,19 @@ class ChatMessage {
     }
     final role = map['role']?.toString();
     final effectiveRole = (role != null && role.isNotEmpty) ? role : 'user';
+    final timestamp = DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+        DateTime.now();
+    final rawUpdatedAt = map['updated_at']?.toString();
+    final updatedAt = (rawUpdatedAt != null && rawUpdatedAt.isNotEmpty)
+        ? DateTime.tryParse(rawUpdatedAt)
+        : null;
     return ChatMessage(
       id: id,
       content: map['content']?.toString() ?? '',
       isUser: effectiveRole == 'user',
       role: effectiveRole,
-      timestamp: DateTime.tryParse(map['created_at']?.toString() ?? '') ??
-          DateTime.now(),
+      timestamp: timestamp,
+      updatedAt: updatedAt,
       includedInContext:
           _parseBool(map['included_in_context'], defaultValue: true),
       metaJson: _parseString(map['meta_json']),
@@ -114,7 +123,8 @@ class ChatMessage {
       'session_id': sessionId,
       'role': role,
       'content': content,
-      'created_at': timestamp.toIso8601String(),
+      'created_at': LWWUtils.formatFixedUtcIso(timestamp),
+      'updated_at': LWWUtils.formatFixedUtcIso(updatedAt ?? timestamp),
       'included_in_context': includedInContext ? 1 : 0,
       'meta_json': metaJson,
       'content_format': contentFormat,
@@ -129,7 +139,9 @@ class ChatMessage {
       'content': content,
       'isUser': isUser,
       'role': role,
-      'timestamp': timestamp.toIso8601String(),
+      'timestamp': LWWUtils.formatFixedUtcIso(timestamp),
+      if (updatedAt != null)
+        'updatedAt': LWWUtils.formatFixedUtcIso(updatedAt!),
       'includedInContext': includedInContext,
       'metaJson': metaJson,
       'state': state.name,
@@ -159,6 +171,8 @@ class ChatMessage {
       }
     }
 
+    final rawUpdatedAt =
+        (json['updatedAt'] ?? json['updated_at'])?.toString() ?? '';
     return ChatMessage(
       id: json['id']?.toString() ?? '',
       content: json['content']?.toString() ?? '',
@@ -166,6 +180,8 @@ class ChatMessage {
       role: role,
       timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
           DateTime.now(),
+      updatedAt:
+          rawUpdatedAt.isNotEmpty ? DateTime.tryParse(rawUpdatedAt) : null,
       includedInContext:
           _parseBool(json['includedInContext'], defaultValue: true),
       metaJson: _parseString(json['metaJson']),
@@ -230,6 +246,7 @@ class ChatMessage {
     bool? isUser,
     String? role,
     DateTime? timestamp,
+    DateTime? updatedAt,
     bool? isLoading,
     bool? includedInContext,
     String? metaJson,
@@ -245,6 +262,7 @@ class ChatMessage {
       isUser: isUser ?? this.isUser,
       role: role ?? this.role,
       timestamp: timestamp ?? this.timestamp,
+      updatedAt: updatedAt ?? this.updatedAt,
       isLoading: isLoading ?? this.isLoading,
       includedInContext: includedInContext ?? this.includedInContext,
       metaJson: metaJson ?? this.metaJson,

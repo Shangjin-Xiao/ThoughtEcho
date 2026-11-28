@@ -15,7 +15,7 @@ class _FakeChatSessionService extends ChatSessionService {
     required this.sessions,
     required this.messageCounts,
     this.searchResults = const [],
-  });
+  }) : super(openOwnDatabase: false);
 
   final List<ChatSession> sessions;
   final Map<String, int> messageCounts;

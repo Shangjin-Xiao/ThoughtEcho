@@ -49,7 +49,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 - **AI 链路**：`MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamService`，API Key 仅走 `APIKeyManager`。`AIConnectionTester` 必须复用 `OpenAIStreamService → openai_dart` 真实链路，超时下沉到 client 配置而非外层 `Future.timeout`。
 - **已删除 API（禁止恢复）**：`AIService.generateDailyPrompt`（改用 `streamGenerateDailyPrompt`）、`TimeUtils.formatTime`（改用 `formatRelativeDateTime` / `formatQuoteTime`）、`NoteSyncService.receiveAndMerge`。
-- **Thoughter 长期记忆（`AgentMemoryService`）**：独立库 `agent_memory.db`（不进备份、不同步），只存笔记推导不出的用户画像/偏好，通过独立 user 消息经 `wrapUserProfile` 注入（禁拼 system prompt），偏好变更原位 supersede。详见 [`docs/agent-memory-research-2026-08-08.md`](docs/agent-memory-research-2026-08-08.md)。
+- **Thoughter 长期记忆（`AgentMemoryService`）**：独立库 `agent_memory.db`（开启记忆开关时进入手动备份/恢复、LocalSend 局域网同步与 WebDAV 同步；关闭时不导出、不合并；偏好设置只进备份覆盖恢复、不同步，API Key 永不同步），只存笔记推导不出的用户画像/偏好，通过独立 user 消息经 `wrapUserProfile` 注入（禁拼 system prompt），偏好变更原位 supersede，跨端合并经墓碑、`cleared_at` 屏障与 Dreaming 笔记依据启发式确定性收敛。详见 [`docs/agent-memory-research-2026-08-08.md`](docs/agent-memory-research-2026-08-08.md)。
 - **新功能可观测性与隐私埋点（默认均关闭，双独立开关）**：
   - **Aptabase 匿名统计**：新增独立页面或用户显式触发的核心功能动作时，在成功触发边界调用 `AptabaseHelper.trackPageView('<snake_case_page>')` 或 `AptabaseHelper.trackEvent('feature_used', {'action': '<snake_case_action>'})`（禁裸调 `Aptabase.instance`；`props` 仅限固定枚举/布尔/数值，严禁含笔记正文、标签、搜索词或位置隐私）。
   - **Sentry 诊断与追踪**：Service 不持有 `BuildContext`；异常统一调 `logError` / `AppLogger.e`（由 `UnifiedLogService` 按开关自动上报 Sentry，不手写 `Sentry.captureException`）；重度加载/渲染链路用 `AppTracer`；**AI 请求严禁挂载 `SentryNetworkTracing`**。
